@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>社團點名簿</title>
+  <title>社團智慧點名簿</title>
   <style>
     :root { --primary: #1a73e8; --success: #1e8e3e; --warning: #f29900; --danger: #d93025; --gray: #5f6368; }
     body { font-family: sans-serif; background: #f1f3f4; padding: 10px; color: #3c4043; }
@@ -16,8 +16,11 @@
     .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     button { padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
     .btn-club { background: #e8f0fe; color: var(--primary); font-size: 16px; }
-    .btn-submit { background: var(--success); color: white; width: 100%; font-size: 18px; margin-bottom: 10px; }
+    
+    /* 修改按鈕寬度與邊距以適應並排 */
+    .btn-submit { background: var(--success); color: white; width: 100%; font-size: 18px; }
     .btn-leave { background: var(--warning); color: white; width: 100%; font-size: 18px; }
+    
     .btn-danger { background: #fce8e6; color: var(--danger); width: 100%; margin-top: 10px; border: 1px solid var(--danger); }
     .btn-outline-danger { background: white; color: var(--danger); border: 1px solid var(--danger); padding: 4px 6px; font-size: 11px; border-radius: 4px; }
     
@@ -36,7 +39,7 @@
 <body>
 
 <div class="card">
-  <h2>社團點名簿</h2>
+  <h2>社團智慧點名簿</h2>
 
   <div id="clubSelection">
     <p style="text-align:center;">請選擇社團：</p>
@@ -62,15 +65,18 @@
         <label><b>尚未處理學生：</b></label>
         <div id="uncheckList"></div>
       </div>
-      <button id="btnSubmit" class="btn-submit" onclick="submitMulti('submit')">出席點名</button>
-      <button id="btnLeave" class="btn-leave" onclick="submitMulti('leave')">學生請假</button>
+      <!-- 修改處：將按鈕放入 btn-grid 容器中以實現並排 -->
+      <div class="btn-grid">
+        <button id="btnSubmit" class="btn-submit" onclick="submitMulti('submit')">出席點名</button>
+        <button id="btnLeave" class="btn-leave" onclick="submitMulti('leave')">學生請假</button>
+      </div>
     </div>
 
     <div id="queryAttendanceArea" class="hidden">
       <div class="section">
         <label><b>名單確認 (*為請假)：</b></label>
         <div id="checkedList"></div>
-        <button class="btn-danger" onclick="confirmDeleteAll()">刪除紀錄</button>
+        <button class="btn-danger" onclick="confirmDeleteAll()">刪除此日期整欄紀錄</button>
       </div>
     </div>
 
@@ -200,7 +206,7 @@
 
   function confirmDeleteAll() {
     if(!document.getElementById('adminPwd').value) return showStatus("請先輸入密碼", "error");
-    if(confirm("確定刪除紀錄嗎？")) callPost({ action: 'deleteAll' });
+    if(confirm("確定刪除此日期整欄紀錄嗎？")) callPost({ action: 'deleteAll' });
   }
 </script>
 
