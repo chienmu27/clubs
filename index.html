@@ -5,23 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>社團點名簿</title>
   <style>
-    :root { --primary: #1a73e8; --success: #1e8e3e; --warning: #f29900; --danger: #d93025; --gray: #5f6368; }
+    :root { --primary: #1a73e8; --success: #1e8e3e; --warning: #f29900; --danger: #d93025; --gray: #5f6368; --logout: #607d8b; }
     body { font-family: sans-serif; background: #f1f3f4; padding: 10px; color: #3c4043; }
     .card { max-width: 550px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
     h2 { text-align: center; color: var(--primary); margin-top: 0; }
+    
+    /* 共用按鈕網格佈局 */
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+    button { padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 15px; }
+    
+    /* 頂部導覽按鈕統一高度與外觀 */
+    .btn-nav { background: #dadce0; color: #3c4043; width: 100%; height: 45px; }
+    .btn-logout { background: var(--logout); color: white; height: 45px; }
+
+    .btn-club { background: #e8f0fe; color: var(--primary); font-size: 16px; margin-bottom: 10px; width: 100%; }
+    .btn-submit { background: var(--success); color: white; width: 100%; font-size: 18px; }
+    .btn-leave { background: var(--warning); color: white; width: 100%; font-size: 18px; }
+    .btn-danger { background: #fce8e6; color: var(--danger); width: 100%; border: 1px solid var(--danger); margin-top: 10px; }
+    .btn-outline-danger { background: white; color: var(--danger); border: 1px solid var(--danger); padding: 4px 6px; font-size: 11px; border-radius: 4px; }
+    .btn-login { background: var(--primary); color: white; width: 100%; margin-top: 10px; }
+
     .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 20px; }
     .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; color: var(--gray); font-weight: bold; }
     .tab.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
+    
     .section { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #eee; }
-    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    button { padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-    .btn-club { background: #e8f0fe; color: var(--primary); font-size: 16px; }
-    .btn-submit { background: var(--success); color: white; width: 100%; font-size: 18px; }
-    .btn-leave { background: var(--warning); color: white; width: 100%; font-size: 18px; }
-    .btn-danger { background: #fce8e6; color: var(--danger); width: 100%; margin-top: 10px; border: 1px solid var(--danger); }
-    .btn-outline-danger { background: white; color: var(--danger); border: 1px solid var(--danger); padding: 4px 6px; font-size: 11px; border-radius: 4px; }
-    .btn-logout { background: #607d8b; color: white; width: 100%; margin-bottom: 15px; }
-    .btn-login { background: var(--primary); color: white; width: 100%; margin-top: 10px; }
     
     #uncheckList, #checkedList { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
     .student-row { display: flex; align-items: center; justify-content: space-between; padding: 8px; border: 1px solid #eee; background: white; border-radius: 6px; font-size: 14px; }
@@ -40,22 +48,25 @@
 <div class="card">
   <h2>社團點名簿</h2>
 
+  <!-- 社團選擇 -->
   <div id="clubSelection">
     <p style="text-align:center;">請選擇社團：</p>
-    <div id="clubBtns" class="btn-grid">讀取中...</div>
+    <div id="clubBtns">讀取中...</div>
   </div>
 
+  <!-- 主頁面 -->
   <div id="mainPage" class="hidden">
-    <div class="btn-grid" style="margin-bottom: 15px;">
-      <button onclick="location.reload()" style="background:#eee;">← 更換社團</button>
+    <div class="btn-grid">
+      <button class="btn-nav" onclick="location.reload()">← 更換社團</button>
       <button id="logoutBtn" class="btn-logout hidden" onclick="logout()">登出</button>
+      <div id="logoutPlaceholder"></div> <!-- 登出前的空位占位 -->
     </div>
     
-    <h3 id="currentClubDisp" style="text-align:center; margin-top:0;"></h3>
+    <h3 id="currentClubDisp" style="text-align:center;"></h3>
 
-    <!-- 登入區域 -->
+    <!-- 驗證區 -->
     <div id="loginArea" class="section">
-      <label><b>點名權限驗證：</b></label>
+      <label><b>管理模式驗證：</b></label>
       <input type="password" id="adminPwd" placeholder="請輸入密碼以進行操作">
       <button class="btn-login" onclick="login()">登入管理模式</button>
     </div>
@@ -70,6 +81,7 @@
       <input type="date" id="targetDate" onchange="refreshLists()">
     </div>
 
+    <!-- 點名/請假內容 -->
     <div id="takeAttendanceArea">
       <div class="section">
         <label><b>尚未處理學生：</b></label>
@@ -81,6 +93,7 @@
       </div>
     </div>
 
+    <!-- 查詢內容 -->
     <div id="queryAttendanceArea" class="hidden">
       <div class="section">
         <label><b>名單確認 (*為請假)：</b></label>
@@ -94,6 +107,7 @@
 </div>
 
 <script>
+  // ⚠️ 貼上你的 GAS 部署 URL
   const API_URL = "https://script.google.com/macros/s/AKfycbxAUZ03sMFdOv_2Z0Ky00lowGNNExFVN0l4gAIUSXUv5lFOy0Hc9-QU2LNKjUTnmX6HDg/exec";
   
   let curClub = "";
@@ -123,33 +137,43 @@
     document.getElementById('mainPage').classList.remove('hidden');
     document.getElementById('currentClubDisp').innerText = "社團：" + curClub;
     
-    // 檢查 LocalStorage 是否已有登入紀錄
+    // 檢查登入狀態
     const savedPwd = localStorage.getItem("club_pwd_" + curClub);
     if (savedPwd) {
+      setUIManageMode(true);
+    } else {
+      setUIManageMode(false);
+    }
+    refreshLists();
+  }
+
+  function setUIManageMode(isLogged) {
+    if(isLogged) {
       document.getElementById('loginArea').classList.add('hidden');
       document.getElementById('actionBtns').classList.remove('hidden');
       document.getElementById('delAllBtn').classList.remove('hidden');
       document.getElementById('logoutBtn').classList.remove('hidden');
+      document.getElementById('logoutPlaceholder').classList.add('hidden');
+    } else {
+      document.getElementById('loginArea').classList.remove('hidden');
+      document.getElementById('actionBtns').classList.add('hidden');
+      document.getElementById('delAllBtn').classList.add('hidden');
+      document.getElementById('logoutBtn').classList.add('hidden');
+      document.getElementById('logoutPlaceholder').classList.remove('hidden');
     }
-    
-    refreshLists();
   }
 
   async function login() {
     const pwd = document.getElementById('adminPwd').value;
     if (!pwd) return showStatus("請輸入密碼", "error");
-    
-    showStatus("驗證中...", "loading");
+    showStatus("正在驗證模式...", "loading");
     try {
       const r = await fetch(`${API_URL}?action=verifyPassword&clubName=${encodeURIComponent(curClub)}&password=${pwd}`);
       const res = await r.json();
       if (res.success) {
         localStorage.setItem("club_pwd_" + curClub, pwd);
-        document.getElementById('loginArea').classList.add('hidden');
-        document.getElementById('actionBtns').classList.remove('hidden');
-        document.getElementById('delAllBtn').classList.remove('hidden');
-        document.getElementById('logoutBtn').classList.remove('hidden');
-        showStatus("登入成功", "success");
+        setUIManageMode(true);
+        showStatus("驗證成功，已進入管理模式", "success");
         setTimeout(clearStatus, 1500);
         refreshLists();
       } else {
@@ -175,10 +199,8 @@
   async function refreshLists() {
     const date = document.getElementById('targetDate').value;
     if(!curClub || !date) return;
-    
     document.getElementById('uncheckList').innerHTML = "<p style='grid-column:span 2;text-align:center;'>載入中...</p>";
     document.getElementById('checkedList').innerHTML = "<p style='grid-column:span 2;text-align:center;'>載入中...</p>";
-    
     const isLogged = localStorage.getItem("club_pwd_" + curClub) !== null;
 
     try {
@@ -188,26 +210,25 @@
       ]);
       renderList('uncheckList', await r1.json(), 'checkbox', isLogged);
       renderList('checkedList', await r2.json(), 'delete', isLogged);
-    } catch(e) { showStatus("讀取失敗", "error"); }
+    } catch(e) { showStatus("資料獲取失敗", "error"); }
   }
 
   function renderList(id, data, type, isLogged) {
     const container = document.getElementById(id);
     if (!data.length) {
-      container.innerHTML = "<p style='grid-column:span 2;color:gray;text-align:center;font-size:14px;'>無資料</p>";
+      container.innerHTML = "<p style='grid-column:span 2;color:gray;text-align:center;font-size:14px;'>目前無資料</p>";
       return;
     }
     container.innerHTML = "";
     data.forEach(nameText => {
       let d = document.createElement('div'); d.className = "student-row";
       if(type === 'checkbox') {
-        // 如果沒登入，隱藏勾選框或禁用
-        const chkHtml = isLogged ? `<input type="checkbox" name="stu" value="${nameText}" style="transform:scale(1.2);">` : `<span>(唯讀)</span>`;
-        d.innerHTML = `<span>${nameText}</span>${chkHtml}`;
+        const ctrl = isLogged ? `<input type="checkbox" name="stu" value="${nameText}" style="transform:scale(1.2);">` : `<span>(唯讀)</span>`;
+        d.innerHTML = `<span>${nameText}</span>${ctrl}`;
       } else {
         const cleanName = nameText.replace('*', '');
-        const delHtml = isLogged ? `<button class="btn-outline-danger" onclick="deleteSingle('${cleanName}')">刪除</button>` : '';
-        d.innerHTML = `<span>${nameText}</span>${delHtml}`;
+        const ctrl = isLogged ? `<button class="btn-outline-danger" onclick="deleteSingle('${cleanName}')">刪除</button>` : '';
+        d.innerHTML = `<span>${nameText}</span>${ctrl}`;
       }
       container.appendChild(d);
     });
@@ -215,9 +236,8 @@
 
   async function callPost(data) {
     const pwd = localStorage.getItem("club_pwd_" + curClub);
-    if(!pwd) return showStatus("請先登入", "error");
-    
-    showStatus("處理中...", "loading");
+    if(!pwd) return showStatus("權限不足，請登入", "error");
+    showStatus("更新資料中...", "loading");
     try {
       const r = await fetch(API_URL, {
         method: 'POST',
@@ -227,26 +247,23 @@
       if(res.status === 'success') {
         showStatus(res.message, "success");
         setTimeout(() => { clearStatus(); refreshLists(); }, 1000);
-      } else {
-        showStatus(res.message, "error");
-      }
-    } catch(e) { showStatus("操作連線錯誤", "error"); }
+      } else showStatus(res.message, "error");
+    } catch(e) { showStatus("更新失敗", "error"); }
   }
 
   function submitMulti(act) {
     const box = document.querySelectorAll('input[name="stu"]:checked');
-    if(!box.length) return showStatus("請勾選學生", "error");
-    const stuList = Array.from(box).map(b => b.value);
-    callPost({ action: act, students: stuList });
+    if(!box.length) return showStatus("請先勾選學生", "error");
+    callPost({ action: act, students: Array.from(box).map(b => b.value) });
   }
 
   function deleteSingle(name) {
-    if(!confirm("確定刪除 " + name + " 的紀錄嗎？")) return;
+    if(!confirm("確定刪除 " + name + " 的紀錄？")) return;
     callPost({ action: 'deleteSingle', studentName: name });
   }
 
   function confirmDeleteAll() {
-    if(confirm("確定刪除此日期整欄紀錄嗎？此操作不可還原。")) {
+    if(confirm("警告：確定要刪除此日期整欄紀錄？此操作不可還原。")) {
       callPost({ action: 'deleteAll' });
     }
   }
