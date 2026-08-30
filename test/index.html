@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>社團點名簿 - 專案版</title>
+  <style>
+    :root { 
+      --primary: #1a73e8; --success: #1e8e3e; --warning: #f29900; --danger: #d93025; 
+      --gray: #5f6368; --logout: #607d8b; --admin: #8e24aa; 
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f3f4; padding: 12px; color: #3c4043; }
+    .card { max-width: 550px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    h2 { text-align: center; color: var(--primary); margin-top: 0; margin-bottom: 15px; }
+
+    /* 頂部連線與資訊區 */
+    .sheet-bar { background: #e8f0fe; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+    .sheet-bar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+    
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+    button { padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 15px; }
+    
+    .btn-nav { background: #dadce0; color: #3c4043; }
+    .btn-logout { background: var(--logout); color: white; }
+    .btn-admin { background: var(--admin); color: white; width: 100%; margin-bottom: 12px; }
+    .btn-club { background: #e8f0fe; color: var(--primary); font-size: 16px; margin-bottom: 10px; width: 100%; }
+    .btn-submit { background: var(--success); color: white; width: 100%; font-size: 17px; }
+    .btn-leave { background: var(--warning); color: white; width: 100%; font-size: 17px; }
+    .btn-danger { background: #fce8e6; color: var(--danger); width: 100%; border: 1px solid var(--danger); margin-top: 10px; }
+    .btn-outline-danger { background: white; color: var(--danger); border: 1px solid var(--danger); padding: 4px 8px; font-size: 12px; border-radius: 4px; cursor: pointer; }
+    .btn-primary { background: var(--primary); color: white; width: 100%; margin-top: 10px; }
+    .btn-link { background: none; border: none; color: var(--primary); text-decoration: underline; cursor: pointer; font-size: 13px; padding: 0; }
+
+    .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 15px; }
+    .tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; color: var(--gray); font-weight: bold; }
+    .tab.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
+    
+    .section { background: #f8f9fa; padding: 14px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #eee; }
+    
+    #uncheckList, #checkedList { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .student-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid #eee; background: white; border-radius: 6px; font-size: 14px; }
+    .stu-info { display: flex; align-items: center; gap: 6px; overflow: hidden; }
+    .stu-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stu-class { font-size: 11px; color: #1a73e8; background: #e8f0fe; padding: 2px 5px; border-radius: 4px; white-space: nowrap; }
+
+    input[type="date"], input[type="password"], input[type="text"], textarea { 
+      width: 100%; padding: 10px; margin-top: 6px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; box-sizing: border-box; 
+    }
+    textarea { height: 120px; font-family: monospace; }
+    
+    .hidden { display: none; }
+    #status { text-align: center; margin-top: 15px; padding: 10px; border-radius: 6px; font-weight: bold; min-height: 20px; font-size: 14px; }
+    .msg-success { background-color: #e6f4ea; color: var(--success); }
+    .msg-error { background-color: #fce8e6; color: var(--danger); }
+    .msg-loading { color: var(--gray); font-style: italic; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>社團點名簿</h2>
+
+  <!-- 試算表連線狀態條 -->
+  <div id="sheetBar" class="sheet-bar hidden">
+    <span id="sheetTitleDisp">試算表：讀取中...</span>
+    <button class="btn-link" onclick="openConnectModal()">⚙️ 變更試算表</button>
+  </div>
+
+  <!-- 1. 初次輸入試算表網址視圖 -->
+  <div id="viewConnect">
+    <div class="section">
+      <label><b>連結 Google 試算表：</b></label>
+      <input type="text" id="sheetUrlInput" placeholder="請貼上試算表完整網址或 ID">
+      <p style="font-size:12px; color:gray; margin: 4px 0 0 0;">系統將自動讀取社團資料與初始化 _AdminAuth 表</p>
+      <button class="btn-primary" onclick="connectSheet()">開始連線</button>
+    </div>
+  </div>
+
+  <!-- 2. 社團選擇視圖 -->
+  <div id="viewClubSelect" class="hidden">
+    <button class="btn-admin" onclick="openAdminPanel()">⚙️ 進入後台管理專區 (新增社團/改密碼)</button>
+    <p style="text-align:center; font-weight:bold;">請選擇社團：</p>
+    <div id="clubBtns">讀取中...</div>
+  </div>
+
+  <!-- 3. 後台管理視圖 (建立新社團 / 修改密碼) -->
+  <div id="viewAdminPanel" class="hidden">
+    <div class="btn-grid">
+      <button class="btn-nav" onclick="closeAdminPanel()">← 回社團列表</button>
+      <button class="btn-logout" onclick="adminLogout()">登出管理員</button>
+    </div>
+
+    <!-- 尚未驗證管理密碼 -->
+    <div id="adminLoginArea" class="section">
+      <label><b>管理員驗證：</b></label>
+      <input type="password" id="adminGlobalPwd" placeholder="請輸入管理密碼 (預設: 1234)">
+      <button class="btn-primary" onclick="verifyAdminGlobal()">登入後台</button>
+    </div>
+
+    <!-- 驗證成功後的功能區 -->
+    <div id="adminActionArea" class="hidden">
+      <!-- 建立新社團 -->
+      <div class="section">
+        <label><b>➕ 新增社團點名簿：</b></label>
+        <input type="text" id="newClubName" placeholder="輸入社團名稱 (如: 直排輪A)">
+        <label style="margin-top:10px; display:block;"><b>匯入學生名單 (A欄姓名, B欄班級)：</b></label>
+        <textarea id="pasteStudents" placeholder="可直接從 Excel 複製貼上：&#10;王維磬&#9;三年二班&#10;張晴嵐&#9;二年三班"></textarea>
+        <button class="btn-primary" style="background:var(--success);" onclick="createNewClub()">建立社團並匯入名單</button>
+      </div>
+
+      <!-- 修改管理密碼 -->
+      <div class="section">
+        <label><b>🔑 修改 _AdminAuth 密碼：</b></label>
+        <input type="password" id="newAdminPwd" placeholder="輸入新密碼">
+        <button class="btn-primary" onclick="changeAdminPassword()">儲存新密碼</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 點名主頁面 -->
+  <div id="viewMain" class="hidden">
+    <div class="btn-grid">
+      <button class="btn-nav" onclick="backToClubs()">← 更換社團</button>
+      <button id="logoutBtn" class="btn-logout hidden" onclick="adminLogout()">登出管理</button>
+      <div id="logoutPlaceholder"></div>
+    </div>
+    
+    <h3 id="currentClubDisp" style="text-align:center; margin: 5px 0 15px 0;"></h3>
+
+    <!-- 管理登入提示 -->
+    <div id="mainLoginPrompt" class="section">
+      <label><b>管理模式驗證：</b></label>
+      <input type="password" id="mainAdminPwd" placeholder="請輸入管理密碼以進行點名操作">
+      <button class="btn-primary" onclick="loginFromMain()">登入管理模式</button>
+    </div>
+
+    <div class="tabs">
+      <div id="tab1" class="tab active" onclick="switchTab('take')">點名/請假</div>
+      <div id="tab2" class="tab" onclick="switchTab('query')">已點查詢</div>
+    </div>
+
+    <div class="section">
+      <label><b>上課日期：</b></label>
+      <input type="date" id="targetDate" onchange="refreshLists()">
+    </div>
+
+    <!-- 點名清單 -->
+    <div id="takeAttendanceArea">
+      <div class="section">
+        <label><b>尚未處理學生：</b></label>
+        <div id="uncheckList"></div>
+      </div>
+      <div id="actionBtns" class="btn-grid hidden">
+        <button class="btn-submit" onclick="submitMulti('submit')">出席點名</button>
+        <button class="btn-leave" onclick="submitMulti('leave')">學生請假</button>
+      </div>
+    </div>
+
+    <!-- 查詢清單 -->
+    <div id="queryAttendanceArea" class="hidden">
+      <div class="section">
+        <label><b>名單確認 (*為請假)：</b></label>
+        <div id="checkedList"></div>
+        <button id="delAllBtn" class="btn-danger hidden" onclick="confirmDeleteAll()">刪除此日期整欄紀錄</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="status"></div>
+</div>
+
+<script>
+  // ⚠️ 請務必將此網址替換為您的 GAS Web App 部署網址
+  const API_URL = "https://script.google.com/macros/s/AKfycbztNs0CYVeoaAroPfHUuFECI89rXyx3n01CbhGz7gpaKPtakWtzdPgFZ8UVlZDOutGC/exec";
+  
+  let currentSheetUrl = "";
+  let currentClub = "";
+  let currentMode = "take";
+
+  window.onload = () => {
+    document.getElementById('targetDate').value = new Date().toISOString().split('T')[0];
+    const savedUrl = localStorage.getItem("club_sheet_url");
+    if (savedUrl) {
+      currentSheetUrl = savedUrl;
+      document.getElementById('sheetUrlInput').value = savedUrl;
+      connectSheet();
+    }
+  };
+
+  // 連線至試算表
+  async function connectSheet() {
+    const url = document.getElementById('sheetUrlInput').value.trim();
+    if (!url) return showStatus("請輸入試算表網址", "error");
+    
+    showStatus("正在連線試算表並檢查環境...", "loading");
+    try {
+      const res = await fetch(`${API_URL}?action=checkConnection&sheetUrl=${encodeURIComponent(url)}`).then(r => r.json());
+      if (res.status === "success") {
+        currentSheetUrl = url;
+        localStorage.setItem("club_sheet_url", url);
+        document.getElementById('sheetBar').classList.remove('hidden');
+        document.getElementById('sheetTitleDisp').innerText = "試算表：" + res.title;
+        showStatus("連線成功！", "success");
+        setTimeout(clearStatus, 1000);
+        showClubSelection();
+      } else {
+        showStatus("連線失敗：" + res.message, "error");
+      }
+    } catch(e) {
+      showStatus("連線異常，請確認 GAS 部署網址是否正確與權限已設為所有人", "error");
+    }
+  }
+
+  function openConnectModal() {
+    hideAllViews();
+    document.getElementById('viewConnect').classList.remove('hidden');
+  }
+
+  // 顯示社團選單
+  async function showClubSelection() {
+    hideAllViews();
+    document.getElementById('viewClubSelect').classList.remove('hidden');
+    const div = document.getElementById('clubBtns');
+    div.innerHTML = "<p style='text-align:center;'>載入社團清單中...</p>";
+
+    try {
+      const res = await fetch(`${API_URL}?action=getClubList&sheetUrl=${encodeURIComponent(currentSheetUrl)}`).then(r => r.json());
+      div.innerHTML = "";
+      if (res.clubs && res.clubs.length > 0) {
+        res.clubs.forEach(c => {
+          let b = document.createElement('button');
+          b.className = "btn-club";
+          b.innerText = c;
+          b.onclick = () => openMainClub(c);
+          div.appendChild(b);
+        });
+      } else {
+        div.innerHTML = "<p style='text-align:center; color:gray;'>目前尚無社團工作表，請點擊上方進入後台新增。</p>";
+      }
+    } catch(e) { showStatus("讀取社團清單失敗", "error"); }
+  }
+
+  // 開啟主點名頁
+  function openMainClub(clubName) {
+    currentClub = clubName;
+    hideAllViews();
+    document.getElementById('viewMain').classList.remove('hidden');
+    document.getElementById('currentClubDisp').innerText = "社團：" + currentClub;
+    
+    checkAdminMode();
+    refreshLists();
+  }
+
+  function backToClubs() {
+    showClubSelection();
+  }
+
+  // 檢查管理員狀態
+  function checkAdminMode() {
+    const isLogged = localStorage.getItem("club_admin_logged") === "true";
+    if (isLogged) {
+      document.getElementById('mainLoginPrompt').classList.add('hidden');
+      document.getElementById('actionBtns').classList.remove('hidden');
+      document.getElementById('delAllBtn').classList.remove('hidden');
+      document.getElementById('logoutBtn').classList.remove('hidden');
+      document.getElementById('logoutPlaceholder').classList.add('hidden');
+    } else {
+      document.getElementById('mainLoginPrompt').classList.remove('hidden');
+      document.getElementById('actionBtns').classList.add('hidden');
+      document.getElementById('delAllBtn').classList.add('hidden');
+      document.getElementById('logoutBtn').classList.add('hidden');
+      document.getElementById('logoutPlaceholder').classList.remove('hidden');
+    }
+  }
+
+  async function loginFromMain() {
+    const pwd = document.getElementById('mainAdminPwd').value;
+    if (!pwd) return showStatus("請輸入密碼", "error");
+    await doAdminVerify(pwd);
+  }
+
+  async function verifyAdminGlobal() {
+    const pwd = document.getElementById('adminGlobalPwd').value;
+    if (!pwd) return showStatus("請輸入密碼", "error");
+    await doAdminVerify(pwd);
+  }
+
+  async function doAdminVerify(pwd) {
+    showStatus("正在驗證密碼...", "loading");
+    try {
+      const res = await fetch(`${API_URL}?action=verifyPassword&sheetUrl=${encodeURIComponent(currentSheetUrl)}&password=${encodeURIComponent(pwd)}`).then(r => r.json());
+      if (res.success) {
+        localStorage.setItem("club_admin_logged", "true");
+        localStorage.setItem("club_admin_pwd", pwd);
+        showStatus("驗證成功！", "success");
+        setTimeout(clearStatus, 1200);
+        
+        // 介面切換
+        if (!document.getElementById('viewAdminPanel').classList.contains('hidden')) {
+          document.getElementById('adminLoginArea').classList.add('hidden');
+          document.getElementById('adminActionArea').classList.remove('hidden');
+        } else {
+          checkAdminMode();
+          refreshLists();
+        }
+      } else {
+        showStatus("密碼錯誤！", "error");
+      }
+    } catch(e) { showStatus("驗證出錯", "error"); }
+  }
+
+  function adminLogout() {
+    localStorage.removeItem("club_admin_logged");
+    localStorage.removeItem("club_admin_pwd");
+    location.reload();
+  }
+
+  // 後台專區
+  function openAdminPanel() {
+    hideAllViews();
+    document.getElementById('viewAdminPanel').classList.remove('hidden');
+    const isLogged = localStorage.getItem("club_admin_logged") === "true";
+    if (isLogged) {
+      document.getElementById('adminLoginArea').classList.add('hidden');
+      document.getElementById('adminActionArea').classList.remove('hidden');
+    } else {
+      document.getElementById('adminLoginArea').classList.remove('hidden');
+      document.getElementById('adminActionArea').classList.add('hidden');
+    }
+  }
+
+  function closeAdminPanel() {
+    showClubSelection();
+  }
+
+  // 後台：新增社團
+  async function createNewClub() {
+    const name = document.getElementById('newClubName').value.trim();
+    const rawData = document.getElementById('pasteStudents').value.trim();
+    if (!name) return showStatus("請輸入社團名稱", "error");
+
+    // 解析貼上的學生資料 (姓名 [Tab/空白/逗號] 班級)
+    const lines = rawData.split('\n');
+    const students = [];
+    lines.forEach(line => {
+      let trimmed = line.trim();
+      if (!trimmed) return;
+      let parts = trimmed.split(/[\t,]/);
+      if (parts.length === 1) parts = trimmed.split(/\s+/);
+      students.push({
+        name: parts[0] ? parts[0].trim() : "",
+        className: parts[1] ? parts[1].trim() : ""
+      });
+    });
+
+    const pwd = localStorage.getItem("club_admin_pwd");
+    showStatus("正在建立社團工作表...", "loading");
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'createClub',
+          sheetUrl: currentSheetUrl,
+          password: pwd,
+          newClubName: name,
+          students: students
+        })
+      }).then(r => r.json());
+
+      if (res.status === "success") {
+        showStatus(res.message, "success");
+        document.getElementById('newClubName').value = "";
+        document.getElementById('pasteStudents').value = "";
+        setTimeout(clearStatus, 2000);
+      } else {
+        showStatus("建立失敗：" + res.message, "error");
+      }
+    } catch(e) { showStatus("建立失敗", "error"); }
+  }
+
+  // 後台：修改密碼
+  async function changeAdminPassword() {
+    const newPwd = document.getElementById('newAdminPwd').value.trim();
+    if (!newPwd) return showStatus("請輸入新密碼", "error");
+    const pwd = localStorage.getItem("club_admin_pwd");
+
+    showStatus("正在儲存新密碼...", "loading");
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'changePassword',
+          sheetUrl: currentSheetUrl,
+          password: pwd,
+          newPassword: newPwd
+        })
+      }).then(r => r.json());
+
+      if (res.status === "success") {
+        localStorage.setItem("club_admin_pwd", newPwd);
+        document.getElementById('newAdminPwd').value = "";
+        showStatus(res.message, "success");
+        setTimeout(clearStatus, 2000);
+      } else {
+        showStatus("更新失敗：" + res.message, "error");
+      }
+    } catch(e) { showStatus("更新密碼出錯", "error"); }
+  }
+
+  // 切換 Tab
+  function switchTab(m) {
+    currentMode = m;
+    document.getElementById('tab1').className = m === 'take' ? 'tab active' : 'tab';
+    document.getElementById('tab2').className = m === 'query' ? 'tab active' : 'tab';
+    document.getElementById('takeAttendanceArea').className = m === 'take' ? '' : 'hidden';
+    document.getElementById('queryAttendanceArea').className = m === 'query' ? '' : 'hidden';
+    clearStatus(); refreshLists();
+  }
+
+  // 刷新點名名單
+  async function refreshLists() {
+    const date = document.getElementById('targetDate').value;
+    if (!currentClub || !date) return;
+    document.getElementById('uncheckList').innerHTML = "<p style='grid-column:span 2;text-align:center;'>載入中...</p>";
+    document.getElementById('checkedList').innerHTML = "<p style='grid-column:span 2;text-align:center;'>載入中...</p>";
+    const isLogged = localStorage.getItem("club_admin_logged") === "true";
+
+    try {
+      const [r1, r2] = await Promise.all([
+        fetch(`${API_URL}?action=getStudents&sheetUrl=${encodeURIComponent(currentSheetUrl)}&clubName=${encodeURIComponent(currentClub)}&date=${date}&mode=unchecked`).then(r => r.json()),
+        fetch(`${API_URL}?action=getStudents&sheetUrl=${encodeURIComponent(currentSheetUrl)}&clubName=${encodeURIComponent(currentClub)}&date=${date}&mode=checked`).then(r => r.json())
+      ]);
+      renderList('uncheckList', r1.data, 'checkbox', isLogged);
+      renderList('checkedList', r2.data, 'delete', isLogged);
+    } catch(e) { showStatus("資料獲取失敗", "error"); }
+  }
+
+  function renderList(id, data, type, isLogged) {
+    const container = document.getElementById(id);
+    if (!data || !data.length) {
+      container.innerHTML = "<p style='grid-column:span 2;color:gray;text-align:center;font-size:14px;'>目前無資料</p>";
+      return;
+    }
+    container.innerHTML = "";
+    data.forEach(item => {
+      let d = document.createElement('div');
+      d.className = "student-row";
+      const classTag = item.className ? `<span class="stu-class">${item.className}</span>` : '';
+
+      if(type === 'checkbox') {
+        const ctrl = isLogged 
+          ? `<input type="checkbox" name="stu" value="${item.name}" style="transform:scale(1.2); cursor:pointer;">` 
+          : `<span style="color:#888; font-size:12px;">(唯讀)</span>`;
+        d.innerHTML = `<div class="stu-info"><span class="stu-name">${item.name}</span>${classTag}</div>${ctrl}`;
+      } else {
+        const displayName = item.isLeave ? `${item.name}*` : item.name;
+        const ctrl = isLogged 
+          ? `<button class="btn-outline-danger" onclick="deleteSingle('${item.name}')">刪除</button>` 
+          : '';
+        d.innerHTML = `<div class="stu-info"><span class="stu-name">${displayName}</span>${classTag}</div>${ctrl}`;
+      }
+      container.appendChild(d);
+    });
+  }
+
+  // 提交點名 / 請假
+  async function callPost(data) {
+    const pwd = localStorage.getItem("club_admin_pwd");
+    if (!pwd) return showStatus("請先登入管理模式", "error");
+    showStatus("正在更新資料...", "loading");
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          ...data,
+          sheetUrl: currentSheetUrl,
+          clubName: currentClub,
+          password: pwd,
+          date: document.getElementById('targetDate').value
+        })
+      }).then(r => r.json());
+
+      if(res.status === 'success') {
+        showStatus(res.message, "success");
+        setTimeout(() => { clearStatus(); refreshLists(); }, 1000);
+      } else showStatus(res.message, "error");
+    } catch(e) { showStatus("操作失敗", "error"); }
+  }
+
+  function submitMulti(act) {
+    const box = document.querySelectorAll('input[name="stu"]:checked');
+    if(!box.length) return showStatus("請先勾選學生", "error");
+    callPost({ action: act, students: Array.from(box).map(b => b.value) });
+  }
+
+  function deleteSingle(name) {
+    if(!confirm(`確定刪除 ${name} 的點名紀錄？`)) return;
+    callPost({ action: 'deleteSingle', studentName: name });
+  }
+
+  function confirmDeleteAll() {
+    if(confirm("警告：確定要刪除此日期整欄紀錄？此操作不可還原。")) {
+      callPost({ action: 'deleteAll' });
+    }
+  }
+
+  function hideAllViews() {
+    ['viewConnect', 'viewClubSelect', 'viewAdminPanel', 'viewMain'].forEach(id => {
+      document.getElementById(id).classList.add('hidden');
+    });
+  }
+
+  function showStatus(msg, type) {
+    const s = document.getElementById('status');
+    s.innerText = msg; s.className = "";
+    if (type === "success") s.classList.add('msg-success');
+    else if (type === "error") s.classList.add('msg-error');
+    else s.classList.add('msg-loading');
+  }
+
+  function clearStatus() {
+    const s = document.getElementById('status');
+    if (s) { s.innerText = ""; s.className = ""; }
+  }
+</script>
+
+</body>
+</html>
