@@ -16,8 +16,8 @@
     .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
     button { padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 15px; }
     
-    .btn-nav { background: #dadce0; color: #3c4043; }
-    .btn-logout { background: var(--logout); color: white; }
+    .btn-nav { background: #dadce0; color: #3c4043; width: 100%; }
+    .btn-logout { background: var(--logout); color: white; width: 100%; }
     .btn-admin { background: var(--admin); color: white; width: 100%; margin-bottom: 12px; }
     .btn-club { background: #e8f0fe; color: var(--primary); font-size: 16px; margin-bottom: 10px; width: 100%; text-align: center; }
     .btn-submit { background: var(--success); color: white; width: 100%; font-size: 17px; }
@@ -46,17 +46,32 @@
     }
     textarea { height: 110px; font-family: monospace; }
     
-    .hidden { display: none; }
+    .hidden { display: none !important; }
     #status { text-align: center; margin-top: 15px; padding: 10px; border-radius: 6px; font-weight: bold; min-height: 20px; font-size: 14px; }
     .msg-success { background-color: #e6f4ea; color: var(--success); }
     .msg-error { background-color: #fce8e6; color: var(--danger); }
     .msg-loading { color: var(--gray); font-style: italic; }
+
+    /* 密碼彈窗樣式 */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.45); display: flex; align-items: center; justify-content: center;
+      z-index: 999; padding: 15px; box-sizing: border-box;
+    }
+    .modal-card {
+      background: white; border-radius: 12px; width: 100%; max-width: 360px; padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15); animation: popIn 0.2s ease-out;
+    }
+    @keyframes popIn {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
   </style>
 </head>
 <body>
 
 <div class="card">
-  <h2><span class="lbl-sys">課後班</span>點名簿</h2>
+  <h2><span class="lbl-sys">社團</span>點名簿</h2>
 
   <!-- 1. 初次未綁定試算表時的管理登入視圖 -->
   <div id="viewInitLogin" class="hidden">
@@ -74,7 +89,7 @@
   <!-- 2. 社團 / 班級清單首頁 -->
   <div id="viewClubSelect" class="hidden">
     <button class="btn-admin" onclick="openAdminPanel()">⚙️ 進入後台管理專區 (新增班級/取專屬網址)</button>
-    <p style="text-align:center; font-weight:bold;">請選擇<span class="lbl-sys">課後班</span>：</p>
+    <p style="text-align:center; font-weight:bold;">請選擇<span class="lbl-sys">社團</span>：</p>
     <div id="clubBtns">讀取中...</div>
   </div>
 
@@ -98,14 +113,14 @@
       <!-- 各班專屬免登入網址清單 -->
       <div class="section" style="border-left: 4px solid var(--primary);">
         <label><b>🔗 各班專屬直達點名網址：</b></label>
-        <p style="font-size:12px; color:gray; margin:4px 0 8px 0;">將連結傳送給老師，點開直接點名，送出時輸入該班密碼即可：</p>
+        <p style="font-size:12px; color:gray; margin:4px 0 8px 0;">傳給老師後直接開啟點名，不顯示後台按鈕，送出時輸入該班密碼：</p>
         <div id="directLinksList"></div>
       </div>
 
       <!-- 新增社團/班級 -->
       <div class="section">
-        <label><b>➕ 新增<span class="lbl-sys">課後班</span>工作表：</b></label>
-        <input type="text" id="newClubName" placeholder="輸入名稱 (如: 直排輪 或 基礎班)">
+        <label><b>➕ 新增<span class="lbl-sys">社團</span>工作表：</b></label>
+        <input type="text" id="newClubName" placeholder="輸入名稱 (如: 空手道 或 直排輪)">
         
         <label style="margin-top:10px; display:block;"><b>🔑 設定該班點名密碼：</b></label>
         <input type="text" id="newClubPwd" placeholder="例如: 115 (若留空預設 1234)">
@@ -118,8 +133,8 @@
 
       <!-- 系統設定與管理者密碼 -->
       <div class="section">
-        <label><b>🏷️ 系統名稱 (如: 課後班 / 社團 / 羽球隊)：</b></label>
-        <input type="text" id="cfgSystemName" placeholder="例如：課後班">
+        <label><b>🏷️ 系統名稱 (如: 社團 / 課後班 / 羽球隊)：</b></label>
+        <input type="text" id="cfgSystemName" placeholder="例如：社團">
         
         <label style="margin-top:10px; display:block;"><b>🔑 修改管理者密碼 (_AdminAuth 第2列)：</b></label>
         <input type="password" id="cfgNewPwd" placeholder="若不修改請留空">
@@ -129,11 +144,12 @@
     </div>
   </div>
 
-  <!-- 4. 點名操作頁面 (支援專屬網址直接開啟) -->
+  <!-- 4. 點名操作頁面 (支援專屬網址直達) -->
   <div id="viewMain" class="hidden">
-    <div class="btn-grid">
-      <button class="btn-nav" onclick="backToClubs()">← 更換項目</button>
-      <button class="btn-admin" style="margin:0; width:100%;" onclick="openAdminPanel()">⚙️ 後台</button>
+    <!-- 頂部按鈕列：專屬網址模式下隱藏「⚙️ 後台」按鈕 -->
+    <div class="btn-grid" id="mainNavGrid">
+      <button id="btnBackToClubs" class="btn-nav" onclick="backToClubs()">← 更換項目</button>
+      <button id="btnAdminInMain" class="btn-admin" style="margin:0; width:100%;" onclick="openAdminPanel()">⚙️ 後台</button>
     </div>
     
     <h3 id="currentClubDisp" style="text-align:center; margin: 5px 0 15px 0;"></h3>
@@ -148,15 +164,15 @@
       <input type="date" id="targetDate" onchange="refreshLists()">
     </div>
 
-    <!-- 尚未點名清單 (直接顯示勾選框) -->
+    <!-- 尚未點名清單 -->
     <div id="takeAttendanceArea">
       <div class="section">
         <label><b>尚未處理學生 (請勾選)：</b></label>
         <div id="uncheckList"></div>
       </div>
       <div class="btn-grid">
-        <button class="btn-submit" onclick="submitMulti('submit')">出席點名</button>
-        <button class="btn-leave" onclick="submitMulti('leave')">學生請假</button>
+        <button class="btn-submit" onclick="startSubmit('submit')">出席點名</button>
+        <button class="btn-leave" onclick="startSubmit('leave')">學生請假</button>
       </div>
     </div>
 
@@ -173,6 +189,19 @@
   <div id="status"></div>
 </div>
 
+<!-- 5. 密碼輸入彈窗 (老師點名送出時跳出) -->
+<div id="pwdModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <h3 id="pwdModalTitle" style="margin-top:0; color:var(--primary); text-align:center;">密碼驗證</h3>
+    <p id="pwdModalDesc" style="font-size:13px; color:gray; text-align:center; margin-bottom:12px;">請輸入點名密碼以完成送出</p>
+    <input type="password" id="inputModalPwd" placeholder="請輸入密碼">
+    <div class="btn-grid" style="margin-top:12px; margin-bottom:0;">
+      <button class="btn-nav" onclick="closePwdModal()">取消</button>
+      <button class="btn-submit" style="font-size:15px; padding:10px;" onclick="confirmPwdModal()">確認送出</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // ⚠️ 您的獨立 GAS 部署 Web App URL
   const API_URL = "https://script.google.com/macros/s/AKfycbztNs0CYVeoaAroPfHUuFECI89rXyx3n01CbhGz7gpaKPtakWtzdPgFZ8UVlZDOutGC/exec";
@@ -180,13 +209,14 @@
   let currentSheetUrl = "";
   let currentClub = "";
   let currentMode = "take";
-  let systemName = "課後班";
-  let clubPasswordsCache = {};
+  let systemName = "社團";
+  let isDedicatedMode = false; // 是否為專屬直達模式
+  let pendingActionData = null; // 待送出的點名資料
 
   window.onload = () => {
     document.getElementById('targetDate').value = new Date().toISOString().split('T')[0];
     
-    // 解析網址參數 (專屬直達連結)
+    // 解析專屬網址參數 (?sheet=...&club=...)
     const urlParams = new URLSearchParams(window.location.search);
     const sheetFromUrl = urlParams.get('sheet');
     const clubFromUrl = urlParams.get('club');
@@ -200,10 +230,12 @@
 
     if (currentSheetUrl) {
       if (clubFromUrl) {
-        // 直達指定社團點名頁面
+        // 專屬模式：直達指定社團 (如空手道)，並隱藏後台按鈕
+        isDedicatedMode = true;
         currentClub = decodeURIComponent(clubFromUrl);
         openMainClub(currentClub);
       } else {
+        isDedicatedMode = false;
         loadSystemAndClubs();
       }
     } else {
@@ -218,14 +250,12 @@
     document.querySelectorAll('.lbl-sys').forEach(el => el.innerText = name);
   }
 
-  // 讀取清單
   async function loadSystemAndClubs() {
     showStatus("連線中...", "loading");
     try {
       const res = await fetch(`${API_URL}?action=getClubList&sheetUrl=${encodeURIComponent(currentSheetUrl)}`).then(r => r.json());
       if (res.status === "success") {
         if (res.systemName) applySystemName(res.systemName);
-        if (res.clubPasswords) clubPasswordsCache = res.clubPasswords;
         clearStatus();
         showClubSelection(res.clubs);
       } else {
@@ -236,7 +266,6 @@
     } catch(e) { showStatus("連線出錯，請確認試算表權限", "error"); }
   }
 
-  // 初次登入
   async function initConnectAndLogin() {
     const url = document.getElementById('initSheetUrl').value.trim();
     const pwd = document.getElementById('initAdminPwd').value.trim();
@@ -279,25 +308,43 @@
     }
   }
 
-  // 直達或開啟特定點名頁面
+  // 開啟指定點名頁面
   function openMainClub(clubName) {
     currentClub = clubName;
     hideAllViews();
     document.getElementById('viewMain').classList.remove('hidden');
     document.getElementById('currentClubDisp').innerText = `${systemName}：` + currentClub;
+
+    // 依模式控制「⚙️ 後台」按鈕是否顯示
+    const btnAdmin = document.getElementById('btnAdminInMain');
+    const navGrid = document.getElementById('mainNavGrid');
+    const btnBack = document.getElementById('btnBackToClubs');
+
+    if (isDedicatedMode) {
+      // 專屬模式：隱藏後台按鈕
+      btnAdmin.classList.add('hidden');
+      navGrid.style.gridTemplateColumns = "1fr";
+      btnBack.innerText = "← 回社團列表";
+    } else {
+      // 一般模式：顯示後台按鈕
+      btnAdmin.classList.remove('hidden');
+      navGrid.style.gridTemplateColumns = "1fr 1fr";
+      btnBack.innerText = `← 更換${systemName}`;
+    }
+
     refreshLists();
   }
 
   function backToClubs() {
-    // 若是透過專屬網址開啟，回清單時清理網址參數
-    if (window.location.search.includes('club=')) {
+    if (isDedicatedMode) {
+      // 若從專屬網址回到總表，轉跳為標準總表網址
       window.location.href = `${window.location.origin}${window.location.pathname}?sheet=${encodeURIComponent(currentSheetUrl)}`;
     } else {
       loadSystemAndClubs();
     }
   }
 
-  // 刷新點名名單 (直接可勾選)
+  // 刷新點名名單
   async function refreshLists() {
     const date = document.getElementById('targetDate').value;
     if (!currentClub || !date) return;
@@ -336,36 +383,78 @@
         const displayName = item.isLeave ? `${item.name}*` : item.name;
         d.innerHTML = `
           <div class="stu-info"><span class="stu-name">${displayName}</span>${classTag}</div>
-          <button class="btn-outline-danger" onclick="deleteSingle('${item.name}')">刪除</button>
+          <button class="btn-outline-danger" onclick="startDeleteSingle('${item.name}')">刪除</button>
         `;
       }
       container.appendChild(d);
     });
   }
 
-  // 取得有效密碼 (優先讀取暫存，無暫存則跳出提示輸入)
-  function getActionPassword() {
-    let pwd = sessionStorage.getItem(`pwd_${currentClub}`) || localStorage.getItem("club_admin_pwd");
-    if (!pwd) {
-      pwd = prompt(`請輸入【${currentClub}】點名密碼 (或管理者密碼) 以送出：`);
-      if (pwd) {
-        sessionStorage.setItem(`pwd_${currentClub}`, pwd.trim());
-      }
-    }
-    return pwd;
+  // 1. 準備送出點名 / 請假 (檢查勾選並跳出彈窗)
+  function startSubmit(act) {
+    const box = document.querySelectorAll('input[name="stu"]:checked');
+    if (!box.length) return showStatus("請先勾選學生！", "error");
+    
+    pendingActionData = {
+      action: act,
+      students: Array.from(box).map(b => b.value)
+    };
+    openPwdModal();
   }
 
-  // 點名 / 請假 送出
-  async function callPost(data) {
-    const pwd = getActionPassword();
-    if (!pwd) return showStatus("已取消送出", "error");
+  function startDeleteSingle(name) {
+    if (!confirm(`確定刪除 ${name} 的點名紀錄？`)) return;
+    pendingActionData = {
+      action: 'deleteSingle',
+      studentName: name
+    };
+    openPwdModal();
+  }
 
-    showStatus("正在更新點名紀錄...", "loading");
+  function confirmDeleteAll() {
+    if (!confirm("警告：確定要刪除此日期整欄紀錄？此操作不可還原。")) return;
+    pendingActionData = { action: 'deleteAll' };
+    openPwdModal();
+  }
+
+  // 2. 開啟與關閉密碼彈窗
+  function openPwdModal() {
+    // 若該班已有記住的密碼，直接送出
+    const savedPwd = sessionStorage.getItem(`pwd_${currentClub}`) || localStorage.getItem("club_admin_pwd");
+    if (savedPwd) {
+      executePost(savedPwd);
+      return;
+    }
+
+    document.getElementById('pwdModalTitle').innerText = `【${currentClub}】點名驗證`;
+    document.getElementById('pwdModalDesc').innerText = `請輸入【${currentClub}】密碼以完成送出：`;
+    document.getElementById('inputModalPwd').value = "";
+    document.getElementById('pwdModal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('inputModalPwd').focus(), 100);
+  }
+
+  function closePwdModal() {
+    document.getElementById('pwdModal').classList.add('hidden');
+    pendingActionData = null;
+  }
+
+  function confirmPwdModal() {
+    const pwd = document.getElementById('inputModalPwd').value.trim();
+    if (!pwd) return alert("請輸入密碼！");
+    closePwdModal();
+    executePost(pwd);
+  }
+
+  // 3. 實際發送至後端驗證與寫入
+  async function executePost(pwd) {
+    if (!pendingActionData) return;
+
+    showStatus("正在驗證密碼並寫入紀錄...", "loading");
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
         body: JSON.stringify({
-          ...data,
+          ...pendingActionData,
           sheetUrl: currentSheetUrl,
           clubName: currentClub,
           password: pwd,
@@ -374,33 +463,20 @@
       }).then(r => r.json());
 
       if (res.status === 'success') {
+        sessionStorage.setItem(`pwd_${currentClub}`, pwd); // 驗證成功後暫存於本次工作階段
         showStatus(res.message, "success");
         setTimeout(() => { clearStatus(); refreshLists(); }, 1000);
       } else {
-        sessionStorage.removeItem(`pwd_${currentClub}`); // 密碼錯誤則清除暫存
+        sessionStorage.removeItem(`pwd_${currentClub}`);
         showStatus(res.message, "error");
       }
-    } catch(e) { showStatus("送出失敗", "error"); }
-  }
-
-  function submitMulti(act) {
-    const box = document.querySelectorAll('input[name="stu"]:checked');
-    if (!box.length) return showStatus("請先勾選學生", "error");
-    callPost({ action: act, students: Array.from(box).map(b => b.value) });
-  }
-
-  function deleteSingle(name) {
-    if (!confirm(`確定刪除 ${name} 的紀錄？`)) return;
-    callPost({ action: 'deleteSingle', studentName: name });
-  }
-
-  function confirmDeleteAll() {
-    if (confirm("警告：確定要刪除此日期整欄紀錄？此操作不可還原。")) {
-      callPost({ action: 'deleteAll' });
+    } catch(e) { showStatus("送出失敗，請重試", "error"); }
+    finally {
+      pendingActionData = null;
     }
   }
 
-  // 後台專區
+  // 後台專區管理
   function openAdminPanel() {
     hideAllViews();
     document.getElementById('viewAdminPanel').classList.remove('hidden');
@@ -437,7 +513,6 @@
     document.getElementById('adminActionArea').classList.remove('hidden');
     document.getElementById('cfgSystemName').value = systemName;
 
-    // 載入各班專屬網址
     const res = await fetch(`${API_URL}?action=getClubList&sheetUrl=${encodeURIComponent(currentSheetUrl)}`).then(r => r.json());
     const listDiv = document.getElementById('directLinksList');
     listDiv.innerHTML = "";
@@ -474,7 +549,6 @@
     location.reload();
   }
 
-  // 新增工作表與產生專屬網址
   async function createNewClub() {
     const name = document.getElementById('newClubName').value.trim();
     const pwd = document.getElementById('newClubPwd').value.trim();
@@ -515,7 +589,7 @@
         document.getElementById('newClubName').value = "";
         document.getElementById('newClubPwd').value = "";
         document.getElementById('pasteStudents').value = "";
-        setupAdminActionArea(); // 重新整理網址清單
+        setupAdminActionArea();
       } else {
         showStatus("建立失敗：" + res.message, "error");
       }
