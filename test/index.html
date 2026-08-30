@@ -60,7 +60,7 @@
     }
     .modal-card {
       background: white; border-radius: 12px; width: 100%; max-width: 360px; padding: 20px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.15); animation: popIn 0.2s ease-out;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.18); animation: popIn 0.2s ease-out;
     }
     @keyframes popIn {
       from { transform: scale(0.92); opacity: 0; }
@@ -109,11 +109,10 @@
 
     <!-- 後台管理功能專區 -->
     <div id="adminActionArea" class="hidden">
-      
       <!-- 各班專屬免登入網址清單 -->
       <div class="section" style="border-left: 4px solid var(--primary);">
         <label><b>🔗 各班專屬直達點名網址：</b></label>
-        <p style="font-size:12px; color:gray; margin:4px 0 8px 0;">傳給老師後直接開啟點名，不顯示後台按鈕，送出時輸入該班密碼：</p>
+        <p style="font-size:12px; color:gray; margin:4px 0 8px 0;">傳給老師後直接開啟點名，不顯示任何導覽按鈕，送出時輸入該班密碼：</p>
         <div id="directLinksList"></div>
       </div>
 
@@ -144,9 +143,9 @@
     </div>
   </div>
 
-  <!-- 4. 點名操作頁面 (支援專屬網址直達) -->
+  <!-- 4. 點名操作頁面 (專屬模式下不顯示導覽列) -->
   <div id="viewMain" class="hidden">
-    <!-- 頂部按鈕列：專屬網址模式下隱藏「⚙️ 後台」按鈕 -->
+    <!-- 頂部按鈕列：專屬網址模式下整個區塊會被隱藏 -->
     <div class="btn-grid" id="mainNavGrid">
       <button id="btnBackToClubs" class="btn-nav" onclick="backToClubs()">← 更換項目</button>
       <button id="btnAdminInMain" class="btn-admin" style="margin:0; width:100%;" onclick="openAdminPanel()">⚙️ 後台</button>
@@ -192,9 +191,9 @@
 <!-- 5. 密碼輸入彈窗 (老師點名送出時跳出) -->
 <div id="pwdModal" class="modal-overlay hidden">
   <div class="modal-card">
-    <h3 id="pwdModalTitle" style="margin-top:0; color:var(--primary); text-align:center;">密碼驗證</h3>
-    <p id="pwdModalDesc" style="font-size:13px; color:gray; text-align:center; margin-bottom:12px;">請輸入點名密碼以完成送出</p>
-    <input type="password" id="inputModalPwd" placeholder="請輸入密碼">
+    <h3 id="pwdModalTitle" style="margin-top:0; color:var(--primary); text-align:center;">點名密碼驗證</h3>
+    <p id="pwdModalDesc" style="font-size:13px; color:gray; text-align:center; margin-bottom:12px;">請輸入該項目點名密碼以完成送出</p>
+    <input type="password" id="inputModalPwd" placeholder="請輸入密碼" onkeydown="if(event.key==='Enter') confirmPwdModal();">
     <div class="btn-grid" style="margin-top:12px; margin-bottom:0;">
       <button class="btn-nav" onclick="closePwdModal()">取消</button>
       <button class="btn-submit" style="font-size:15px; padding:10px;" onclick="confirmPwdModal()">確認送出</button>
@@ -211,7 +210,7 @@
   let currentMode = "take";
   let systemName = "社團";
   let isDedicatedMode = false; // 是否為專屬直達模式
-  let pendingActionData = null; // 待送出的點名資料
+  let pendingActionData = null; // 暫存送出的點名資料
 
   window.onload = () => {
     document.getElementById('targetDate').value = new Date().toISOString().split('T')[0];
@@ -230,7 +229,7 @@
 
     if (currentSheetUrl) {
       if (clubFromUrl) {
-        // 專屬模式：直達指定社團 (如空手道)，並隱藏後台按鈕
+        // 專屬模式：直達指定社團 (如空手道)，完全隱藏頂部導覽列
         isDedicatedMode = true;
         currentClub = decodeURIComponent(clubFromUrl);
         openMainClub(currentClub);
@@ -315,33 +314,23 @@
     document.getElementById('viewMain').classList.remove('hidden');
     document.getElementById('currentClubDisp').innerText = `${systemName}：` + currentClub;
 
-    // 依模式控制「⚙️ 後台」按鈕是否顯示
-    const btnAdmin = document.getElementById('btnAdminInMain');
     const navGrid = document.getElementById('mainNavGrid');
-    const btnBack = document.getElementById('btnBackToClubs');
-
     if (isDedicatedMode) {
-      // 專屬模式：隱藏後台按鈕
-      btnAdmin.classList.add('hidden');
-      navGrid.style.gridTemplateColumns = "1fr";
-      btnBack.innerText = "← 回社團列表";
+      // 專屬模式：徹底隱藏整個頂部導覽列 (不顯示「回社團列表」與「後台」)
+      navGrid.classList.add('hidden');
     } else {
-      // 一般模式：顯示後台按鈕
-      btnAdmin.classList.remove('hidden');
+      // 一般模式：顯示導覽列
+      navGrid.classList.remove('hidden');
+      document.getElementById('btnAdminInMain').classList.remove('hidden');
       navGrid.style.gridTemplateColumns = "1fr 1fr";
-      btnBack.innerText = `← 更換${systemName}`;
+      document.getElementById('btnBackToClubs').innerText = `← 更換${systemName}`;
     }
 
     refreshLists();
   }
 
   function backToClubs() {
-    if (isDedicatedMode) {
-      // 若從專屬網址回到總表，轉跳為標準總表網址
-      window.location.href = `${window.location.origin}${window.location.pathname}?sheet=${encodeURIComponent(currentSheetUrl)}`;
-    } else {
-      loadSystemAndClubs();
-    }
+    loadSystemAndClubs();
   }
 
   // 刷新點名名單
@@ -390,7 +379,7 @@
     });
   }
 
-  // 1. 準備送出點名 / 請假 (檢查勾選並跳出彈窗)
+  // 1. 點擊「出席點名」或「學生請假」-> 檢查勾選並彈出密碼視窗
   function startSubmit(act) {
     const box = document.querySelectorAll('input[name="stu"]:checked');
     if (!box.length) return showStatus("請先勾選學生！", "error");
@@ -419,18 +408,11 @@
 
   // 2. 開啟與關閉密碼彈窗
   function openPwdModal() {
-    // 若該班已有記住的密碼，直接送出
-    const savedPwd = sessionStorage.getItem(`pwd_${currentClub}`) || localStorage.getItem("club_admin_pwd");
-    if (savedPwd) {
-      executePost(savedPwd);
-      return;
-    }
-
     document.getElementById('pwdModalTitle').innerText = `【${currentClub}】點名驗證`;
-    document.getElementById('pwdModalDesc').innerText = `請輸入【${currentClub}】密碼以完成送出：`;
+    document.getElementById('pwdModalDesc').innerText = `請輸入【${currentClub}】點名密碼以送出紀錄：`;
     document.getElementById('inputModalPwd').value = "";
     document.getElementById('pwdModal').classList.remove('hidden');
-    setTimeout(() => document.getElementById('inputModalPwd').focus(), 100);
+    setTimeout(() => document.getElementById('inputModalPwd').focus(), 150);
   }
 
   function closePwdModal() {
@@ -445,11 +427,11 @@
     executePost(pwd);
   }
 
-  // 3. 實際發送至後端驗證與寫入
+  // 3. 攜帶密碼送至後端驗證寫入
   async function executePost(pwd) {
     if (!pendingActionData) return;
 
-    showStatus("正在驗證密碼並寫入紀錄...", "loading");
+    showStatus("正在驗證密碼並寫入試算表...", "loading");
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
@@ -463,12 +445,12 @@
       }).then(r => r.json());
 
       if (res.status === 'success') {
-        sessionStorage.setItem(`pwd_${currentClub}`, pwd); // 驗證成功後暫存於本次工作階段
         showStatus(res.message, "success");
         setTimeout(() => { clearStatus(); refreshLists(); }, 1000);
       } else {
-        sessionStorage.removeItem(`pwd_${currentClub}`);
         showStatus(res.message, "error");
+        // 密碼錯誤時重新跳出輸入視窗
+        setTimeout(openPwdModal, 1500);
       }
     } catch(e) { showStatus("送出失敗，請重試", "error"); }
     finally {
@@ -545,7 +527,6 @@
   function adminLogout() {
     localStorage.removeItem("club_admin_logged");
     localStorage.removeItem("club_admin_pwd");
-    sessionStorage.clear();
     location.reload();
   }
 
