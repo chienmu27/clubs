@@ -209,8 +209,8 @@
   let currentClub = "";
   let currentMode = "take";
   let systemName = "社團";
-  let isDedicatedMode = false; // 是否為專屬直達模式
-  let pendingActionData = null; // 暫存送出的點名資料
+  let isDedicatedMode = false;
+  let pendingActionData = null; // 暫存要送出的操作與學生資料
 
   window.onload = () => {
     document.getElementById('targetDate').value = new Date().toISOString().split('T')[0];
@@ -229,7 +229,7 @@
 
     if (currentSheetUrl) {
       if (clubFromUrl) {
-        // 專屬模式：直達指定社團 (如空手道)，完全隱藏頂部導覽列
+        // 專屬模式：直達指定社團 (如空手道)，隱藏頂部導覽列
         isDedicatedMode = true;
         currentClub = decodeURIComponent(clubFromUrl);
         openMainClub(currentClub);
@@ -307,7 +307,6 @@
     }
   }
 
-  // 開啟指定點名頁面
   function openMainClub(clubName) {
     currentClub = clubName;
     hideAllViews();
@@ -316,10 +315,9 @@
 
     const navGrid = document.getElementById('mainNavGrid');
     if (isDedicatedMode) {
-      // 專屬模式：徹底隱藏整個頂部導覽列 (不顯示「回社團列表」與「後台」)
+      // 專屬模式：徹底隱藏整個頂部導覽列
       navGrid.classList.add('hidden');
     } else {
-      // 一般模式：顯示導覽列
       navGrid.classList.remove('hidden');
       document.getElementById('btnAdminInMain').classList.remove('hidden');
       navGrid.style.gridTemplateColumns = "1fr 1fr";
@@ -379,11 +377,12 @@
     });
   }
 
-  // 1. 點擊「出席點名」或「學生請假」-> 檢查勾選並彈出密碼視窗
+  // 1. 點擊「出席點名」或「學生請假」
   function startSubmit(act) {
     const box = document.querySelectorAll('input[name="stu"]:checked');
     if (!box.length) return showStatus("請先勾選學生！", "error");
     
+    // 儲存待處理的學生與動作
     pendingActionData = {
       action: act,
       students: Array.from(box).map(b => b.value)
@@ -406,7 +405,7 @@
     openPwdModal();
   }
 
-  // 2. 開啟與關閉密碼彈窗
+  // 2. 密碼彈窗控制
   function openPwdModal() {
     document.getElementById('pwdModalTitle').innerText = `【${currentClub}】點名驗證`;
     document.getElementById('pwdModalDesc').innerText = `請輸入【${currentClub}】點名密碼以送出紀錄：`;
@@ -420,41 +419,52 @@
     pendingActionData = null;
   }
 
+  // 確認送出 (此處確保 pendingActionData 不會被提前清空)
   function confirmPwdModal() {
     const pwd = document.getElementById('inputModalPwd').value.trim();
     if (!pwd) return alert("請輸入密碼！");
-    closePwdModal();
+    
+    // 關閉彈窗但保留資料
+    document.getElementById('pwdModal').classList.add('hidden');
     executePost(pwd);
   }
 
-  // 3. 攜帶密碼送至後端驗證寫入
+  // 3. 攜帶密碼發送 POST 請求寫入試算表
   async function executePost(pwd) {
-    if (!pendingActionData) return;
+    if (!pendingActionData) {
+      showStatus("沒有待送出的資料，請重新勾選", "error");
+      return;
+    }
+
+    const payload = {
+      ...pendingActionData,
+      sheetUrl: currentSheetUrl,
+      clubName: currentClub,
+      password: pwd,
+      date: document.getElementById('targetDate').value
+    };
+
+    // 暫存資料送出後即可清空
+    pendingActionData = null;
 
     showStatus("正在驗證密碼並寫入試算表...", "loading");
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
-        body: JSON.stringify({
-          ...pendingActionData,
-          sheetUrl: currentSheetUrl,
-          clubName: currentClub,
-          password: pwd,
-          date: document.getElementById('targetDate').value
-        })
+        body: JSON.stringify(payload)
       }).then(r => r.json());
 
       if (res.status === 'success') {
         showStatus(res.message, "success");
         setTimeout(() => { clearStatus(); refreshLists(); }, 1000);
       } else {
-        showStatus(res.message, "error");
-        // 密碼錯誤時重新跳出輸入視窗
+        showStatus(res.message || "密碼錯誤，寫入失敗", "error");
+        // 若失敗，恢復操作資料並重新跳出彈窗讓使用者重試
+        pendingActionData = { action: payload.action, students: payload.students, studentName: payload.studentName };
         setTimeout(openPwdModal, 1500);
       }
-    } catch(e) { showStatus("送出失敗，請重試", "error"); }
-    finally {
-      pendingActionData = null;
+    } catch(e) { 
+      showStatus("送出失敗，請檢查網路或試算表權限", "error"); 
     }
   }
 
