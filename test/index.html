@@ -52,7 +52,7 @@
     .msg-error { background-color: #fce8e6; color: var(--danger); }
     .msg-loading { color: var(--gray); font-style: italic; }
 
-    /* 密碼彈窗樣式 */
+    /* 密碼彈窗 */
     .modal-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0, 0, 0, 0.45); display: flex; align-items: center; justify-content: center;
@@ -73,22 +73,22 @@
 <div class="card">
   <h2><span class="lbl-sys">社團</span>點名簿</h2>
 
-  <!-- 1. 初次未綁定試算表時的管理登入視圖 -->
+  <!-- 1. 初次未綁定試算表時的初始化登入視圖 -->
   <div id="viewInitLogin" class="hidden">
     <div class="section">
-      <h4 style="margin:0 0 10px 0; text-align:center;">系統初始化綁定</h4>
-      <label><b>請輸入試算表網址：</b></label>
+      <h4 style="margin:0 0 10px 0; text-align:center;">系統初始化綁定試算表</h4>
+      <label><b>請輸入 Google 試算表網址：</b></label>
       <input type="text" id="initSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/...">
       
       <label style="margin-top:10px; display:block;"><b>管理密碼 (預設 1234)：</b></label>
       <input type="password" id="initAdminPwd" placeholder="請輸入管理密碼">
-      <button class="btn-primary" onclick="initConnectAndLogin()">登入並連結試算表</button>
+      <button class="btn-primary" onclick="initConnectAndLogin()">儲存並永久綁定試算表</button>
     </div>
   </div>
 
   <!-- 2. 社團 / 班級清單首頁 -->
   <div id="viewClubSelect" class="hidden">
-    <button class="btn-admin" onclick="openAdminPanel()">⚙️ 進入後台管理專區 (新增班級/取專屬網址)</button>
+    <button class="btn-admin" onclick="openAdminPanel()">⚙️ 進入後台管理專區 (修改試算表/新增班級/密碼)</button>
     <p style="text-align:center; font-weight:bold;">請選擇<span class="lbl-sys">社團</span>：</p>
     <div id="clubBtns">讀取中...</div>
   </div>
@@ -109,6 +109,22 @@
 
     <!-- 後台管理功能專區 -->
     <div id="adminActionArea" class="hidden">
+      
+      <!-- 試算表網址修改與系統設定 -->
+      <div class="section" style="border-left: 4px solid var(--admin);">
+        <label><b>🔗 綁定試算表網址 (伺服器永久保存)：</b></label>
+        <input type="text" id="cfgSheetUrl" placeholder="貼上新的試算表網址">
+        <p style="font-size:12px; color:gray; margin:2px 0 8px 0;">網址已儲存於伺服器，所有人與裝置免設定直接共用，若需更換新表在此貼上儲存即可。</p>
+
+        <label style="margin-top:8px; display:block;"><b>🏷️ 系統名稱 (如: 社團 / 課後班 / 羽球隊)：</b></label>
+        <input type="text" id="cfgSystemName" placeholder="例如：社團">
+        
+        <label style="margin-top:8px; display:block;"><b>🔑 修改管理者密碼 (_AdminAuth 第2列)：</b></label>
+        <input type="password" id="cfgNewPwd" placeholder="若不修改請留空">
+        
+        <button class="btn-primary" onclick="saveSystemConfig()">儲存系統設定</button>
+      </div>
+
       <!-- 各班專屬免登入網址清單 -->
       <div class="section" style="border-left: 4px solid var(--primary);">
         <label><b>🔗 各班專屬直達點名網址：</b></label>
@@ -129,21 +145,10 @@
         
         <button class="btn-primary" style="background:var(--success);" onclick="createNewClub()">建立工作表並產生專屬網址</button>
       </div>
-
-      <!-- 系統設定與管理者密碼 -->
-      <div class="section">
-        <label><b>🏷️ 系統名稱 (如: 社團 / 課後班 / 羽球隊)：</b></label>
-        <input type="text" id="cfgSystemName" placeholder="例如：社團">
-        
-        <label style="margin-top:10px; display:block;"><b>🔑 修改管理者密碼 (_AdminAuth 第2列)：</b></label>
-        <input type="password" id="cfgNewPwd" placeholder="若不修改請留空">
-        
-        <button class="btn-primary" onclick="saveSystemConfig()">儲存設定</button>
-      </div>
     </div>
   </div>
 
-  <!-- 4. 點名操作頁面 (專屬模式下不顯示導覽列) -->
+  <!-- 4. 點名操作頁面 -->
   <div id="viewMain" class="hidden">
     <!-- 頂部按鈕列：專屬網址模式下整個區塊會被隱藏 -->
     <div class="btn-grid" id="mainNavGrid">
@@ -210,36 +215,44 @@
   let currentMode = "take";
   let systemName = "社團";
   let isDedicatedMode = false;
-  let pendingActionData = null; // 暫存要送出的操作與學生資料
+  let pendingActionData = null;
 
-  window.onload = () => {
+  window.onload = async () => {
     document.getElementById('targetDate').value = new Date().toISOString().split('T')[0];
     
-    // 解析專屬網址參數 (?sheet=...&club=...)
     const urlParams = new URLSearchParams(window.location.search);
-    const sheetFromUrl = urlParams.get('sheet');
-    const clubFromUrl = urlParams.get('club');
+    const sheetFromUrl = urlParams.get('sheet') || "";
+    const clubFromUrl = urlParams.get('club') || "";
 
-    if (sheetFromUrl) {
-      currentSheetUrl = decodeURIComponent(sheetFromUrl);
-      localStorage.setItem("club_sheet_url", currentSheetUrl);
-    } else {
-      currentSheetUrl = localStorage.getItem("club_sheet_url") || "";
-    }
+    showStatus("正在連線系統...", "loading");
 
-    if (currentSheetUrl) {
-      if (clubFromUrl) {
-        // 專屬模式：直達指定社團 (如空手道)，隱藏頂部導覽列
-        isDedicatedMode = true;
-        currentClub = decodeURIComponent(clubFromUrl);
-        openMainClub(currentClub);
+    try {
+      // 向後端請求系統連線資訊 (自動從伺服器端讀取已儲存的試算表網址)
+      const res = await fetch(`${API_URL}?action=getSystemConfig&sheetUrl=${encodeURIComponent(sheetFromUrl)}`).then(r => r.json());
+
+      if (res.status === "need_init") {
+        clearStatus();
+        hideAllViews();
+        document.getElementById('viewInitLogin').classList.remove('hidden');
+      } else if (res.status === "success") {
+        currentSheetUrl = res.sheetUrl;
+        if (res.systemName) applySystemName(res.systemName);
+        clearStatus();
+
+        if (clubFromUrl) {
+          // 專屬模式：直達指定社團
+          isDedicatedMode = true;
+          currentClub = decodeURIComponent(clubFromUrl);
+          openMainClub(currentClub);
+        } else {
+          isDedicatedMode = false;
+          loadSystemAndClubs();
+        }
       } else {
-        isDedicatedMode = false;
-        loadSystemAndClubs();
+        showStatus("連線異常：" + res.message, "error");
       }
-    } else {
-      hideAllViews();
-      document.getElementById('viewInitLogin').classList.remove('hidden');
+    } catch(e) {
+      showStatus("無法連接後端，請確認 GAS 部署網址是否正確", "error");
     }
   };
 
@@ -249,43 +262,49 @@
     document.querySelectorAll('.lbl-sys').forEach(el => el.innerText = name);
   }
 
+  // 讀取社團清單
   async function loadSystemAndClubs() {
-    showStatus("連線中...", "loading");
+    showStatus("讀取清單中...", "loading");
     try {
       const res = await fetch(`${API_URL}?action=getClubList&sheetUrl=${encodeURIComponent(currentSheetUrl)}`).then(r => r.json());
       if (res.status === "success") {
+        currentSheetUrl = res.sheetUrl;
         if (res.systemName) applySystemName(res.systemName);
         clearStatus();
         showClubSelection(res.clubs);
       } else {
-        showStatus("連線失敗：" + res.message, "error");
-        hideAllViews();
-        document.getElementById('viewInitLogin').classList.remove('hidden');
+        showStatus("讀取失敗：" + res.message, "error");
       }
-    } catch(e) { showStatus("連線出錯，請確認試算表權限", "error"); }
+    } catch(e) { showStatus("讀取失敗", "error"); }
   }
 
+  // 初次初始化綁定 (寫入伺服器端永久保存)
   async function initConnectAndLogin() {
     const url = document.getElementById('initSheetUrl').value.trim();
     const pwd = document.getElementById('initAdminPwd').value.trim();
     if (!url || !pwd) return showStatus("請輸入網址與管理密碼", "error");
 
-    showStatus("正在驗證連線...", "loading");
+    showStatus("正在綁定並永久儲存試算表...", "loading");
     try {
-      const res = await fetch(`${API_URL}?action=verifyPassword&sheetUrl=${encodeURIComponent(url)}&password=${encodeURIComponent(pwd)}`).then(r => r.json());
-      if (res.success) {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'initSetup',
+          sheetUrl: url,
+          password: pwd
+        })
+      }).then(r => r.json());
+
+      if (res.status === "success") {
         currentSheetUrl = url;
-        localStorage.setItem("club_sheet_url", url);
         localStorage.setItem("club_admin_logged", "true");
         localStorage.setItem("club_admin_pwd", pwd);
-        if (res.systemName) applySystemName(res.systemName);
-        
-        showStatus("連線成功！", "success");
+        showStatus("綁定成功！", "success");
         setTimeout(() => { clearStatus(); loadSystemAndClubs(); }, 1000);
       } else {
-        showStatus("密碼錯誤或無法存取試算表！", "error");
+        showStatus(res.message || "綁定失敗！", "error");
       }
-    } catch(e) { showStatus("連線失敗", "error"); }
+    } catch(e) { showStatus("綁定失敗", "error"); }
   }
 
   function showClubSelection(clubs) {
@@ -315,7 +334,7 @@
 
     const navGrid = document.getElementById('mainNavGrid');
     if (isDedicatedMode) {
-      // 專屬模式：徹底隱藏整個頂部導覽列
+      // 專屬直達模式：隱藏頂部導覽列
       navGrid.classList.add('hidden');
     } else {
       navGrid.classList.remove('hidden');
@@ -377,12 +396,11 @@
     });
   }
 
-  // 1. 點擊「出席點名」或「學生請假」
+  // 1. 點擊送出點名
   function startSubmit(act) {
     const box = document.querySelectorAll('input[name="stu"]:checked');
     if (!box.length) return showStatus("請先勾選學生！", "error");
     
-    // 儲存待處理的學生與動作
     pendingActionData = {
       action: act,
       students: Array.from(box).map(b => b.value)
@@ -405,7 +423,7 @@
     openPwdModal();
   }
 
-  // 2. 密碼彈窗控制
+  // 2. 密碼彈窗
   function openPwdModal() {
     document.getElementById('pwdModalTitle').innerText = `【${currentClub}】點名驗證`;
     document.getElementById('pwdModalDesc').innerText = `請輸入【${currentClub}】點名密碼以送出紀錄：`;
@@ -419,22 +437,17 @@
     pendingActionData = null;
   }
 
-  // 確認送出 (此處確保 pendingActionData 不會被提前清空)
   function confirmPwdModal() {
     const pwd = document.getElementById('inputModalPwd').value.trim();
     if (!pwd) return alert("請輸入密碼！");
     
-    // 關閉彈窗但保留資料
     document.getElementById('pwdModal').classList.add('hidden');
     executePost(pwd);
   }
 
-  // 3. 攜帶密碼發送 POST 請求寫入試算表
+  // 3. 發送請求寫入試算表
   async function executePost(pwd) {
-    if (!pendingActionData) {
-      showStatus("沒有待送出的資料，請重新勾選", "error");
-      return;
-    }
+    if (!pendingActionData) return;
 
     const payload = {
       ...pendingActionData,
@@ -444,7 +457,6 @@
       date: document.getElementById('targetDate').value
     };
 
-    // 暫存資料送出後即可清空
     pendingActionData = null;
 
     showStatus("正在驗證密碼並寫入試算表...", "loading");
@@ -459,7 +471,6 @@
         setTimeout(() => { clearStatus(); refreshLists(); }, 1000);
       } else {
         showStatus(res.message || "密碼錯誤，寫入失敗", "error");
-        // 若失敗，恢復操作資料並重新跳出彈窗讓使用者重試
         pendingActionData = { action: payload.action, students: payload.students, studentName: payload.studentName };
         setTimeout(openPwdModal, 1500);
       }
@@ -468,7 +479,7 @@
     }
   }
 
-  // 後台專區管理
+  // 後台專區
   function openAdminPanel() {
     hideAllViews();
     document.getElementById('viewAdminPanel').classList.remove('hidden');
@@ -504,6 +515,7 @@
     document.getElementById('adminLoginArea').classList.add('hidden');
     document.getElementById('adminActionArea').classList.remove('hidden');
     document.getElementById('cfgSystemName').value = systemName;
+    document.getElementById('cfgSheetUrl').value = currentSheetUrl;
 
     const res = await fetch(`${API_URL}?action=getClubList&sheetUrl=${encodeURIComponent(currentSheetUrl)}`).then(r => r.json());
     const listDiv = document.getElementById('directLinksList');
@@ -512,7 +524,7 @@
     const baseUrl = `${window.location.origin}${window.location.pathname}`;
     if (res.clubs && res.clubs.length > 0) {
       res.clubs.forEach(c => {
-        const directUrl = `${baseUrl}?sheet=${encodeURIComponent(currentSheetUrl)}&club=${encodeURIComponent(c)}`;
+        const directUrl = `${baseUrl}?club=${encodeURIComponent(c)}`;
         const row = document.createElement('div');
         row.className = "club-item-row";
         row.innerHTML = `
@@ -534,10 +546,47 @@
     }
   }
 
+  // 登出只清除本機的管理員登入身分，不會刪除伺服器儲存的試算表網址
   function adminLogout() {
     localStorage.removeItem("club_admin_logged");
     localStorage.removeItem("club_admin_pwd");
+    sessionStorage.clear();
     location.reload();
+  }
+
+  // 後台儲存系統設定 (包含修改試算表網址)
+  async function saveSystemConfig() {
+    const newSheet = document.getElementById('cfgSheetUrl').value.trim();
+    const newName = document.getElementById('cfgSystemName').value.trim();
+    const newPwd = document.getElementById('cfgNewPwd').value.trim();
+    const adminPwd = localStorage.getItem("club_admin_pwd");
+
+    if (!newSheet) return showStatus("試算表網址不能為空", "error");
+
+    showStatus("正在儲存並同步伺服器設定...", "loading");
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'updateConfig',
+          sheetUrl: currentSheetUrl,
+          newSheetUrl: newSheet,
+          password: adminPwd,
+          newSystemName: newName,
+          newPassword: newPwd
+        })
+      }).then(r => r.json());
+
+      if (res.status === "success") {
+        currentSheetUrl = newSheet;
+        applySystemName(newName);
+        if (newPwd) localStorage.setItem("club_admin_pwd", newPwd);
+        showStatus("設定已成功永久儲存！", "success");
+        setTimeout(() => { clearStatus(); setupAdminActionArea(); }, 1500);
+      } else {
+        showStatus("儲存失敗：" + res.message, "error");
+      }
+    } catch(e) { showStatus("儲存失敗", "error"); }
   }
 
   async function createNewClub() {
@@ -585,35 +634,6 @@
         showStatus("建立失敗：" + res.message, "error");
       }
     } catch(e) { showStatus("建立失敗", "error"); }
-  }
-
-  async function saveSystemConfig() {
-    const newName = document.getElementById('cfgSystemName').value.trim();
-    const newPwd = document.getElementById('cfgNewPwd').value.trim();
-    const adminPwd = localStorage.getItem("club_admin_pwd");
-
-    showStatus("正在儲存...", "loading");
-    try {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'updateConfig',
-          sheetUrl: currentSheetUrl,
-          password: adminPwd,
-          newSystemName: newName,
-          newPassword: newPwd
-        })
-      }).then(r => r.json());
-
-      if (res.status === "success") {
-        applySystemName(newName);
-        if (newPwd) localStorage.setItem("club_admin_pwd", newPwd);
-        showStatus("設定已儲存！", "success");
-        setTimeout(clearStatus, 2000);
-      } else {
-        showStatus("儲存失敗：" + res.message, "error");
-      }
-    } catch(e) { showStatus("儲存失敗", "error"); }
   }
 
   function copyText(text, label) {
