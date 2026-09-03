@@ -227,7 +227,7 @@
             </div>
 
             <!-- ==========================================
-                 分頁 2：線上報名 (需知閱讀同意 ➔ 展開填報表單)
+                 分頁 2：線上報名 (需知同意 ➔ 切換顯示填報表單)
                  ========================================== -->
             <div class="tab-pane fade" id="form-pane" role="tabpanel">
                 
@@ -276,7 +276,7 @@
                     </div>
 
                     <!-- 勾選閱讀與前往報名按鈕 -->
-                    <div class="card p-3 bg-light border text-center my-3">
+                    <div class="card p-3 bg-light border text-center my-3 shadow-sm">
                         <div class="form-check d-inline-block text-start mb-3">
                             <input class="form-check-input" type="checkbox" id="agreeCheckbox" onchange="toggleAgreeButton()">
                             <label class="form-check-label fw-bold text-dark fs-6" for="agreeCheckbox" style="cursor: pointer;">
@@ -291,8 +291,8 @@
                     </div>
                 </div>
 
-                <!-- 【第二階段】：自製報名填報表單 (預設隱藏，勾選同意後展開) -->
-                <div id="registrationSection" class="form-section pt-3" style="display: none;">
+                <!-- 【第二階段】：自製報名填報表單 (勾選同意後顯示，需知自動隱藏) -->
+                <div id="registrationSection" class="form-section pt-2" style="display: none;">
                     <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
                         <h4 class="fw-bold text-primary mb-0">📝 學生社團線上報名</h4>
                         <button class="btn btn-sm btn-outline-secondary" type="button" onclick="showNoticeAgain()">
@@ -320,7 +320,7 @@
 
                         <!-- 學生年級、班級、座號 (改為下拉選單) -->
                         <div class="row g-2 mb-3">
-                            <!-- 年級修改：一年、二年、三年、四年、五年、六年 -->
+                            <!-- 年級：一年、二年、三年、四年、五年、六年 -->
                             <div class="col-4">
                                 <label for="gradeInput" class="form-label">年級<span class="required-star">*</span></label>
                                 <select class="form-select form-select-lg" id="gradeInput" required>
@@ -333,7 +333,7 @@
                                     <option value="六年">六年</option>
                                 </select>
                             </div>
-                            <!-- 班級修改：一班、二班、三班、四班 -->
+                            <!-- 班級：一班、二班、三班、四班 -->
                             <div class="col-4">
                                 <label for="classInput" class="form-label">班級<span class="required-star">*</span></label>
                                 <select class="form-select form-select-lg" id="classInput" required>
@@ -436,17 +436,21 @@
         agreeBtn.disabled = !checkbox.checked;
     }
 
-    // 點擊「我已閱讀，前往報名」：展開表單並載入最新社團名額
+    // 【核心修正點】：點擊「我已閱讀，前往報名」
+    // ➔ 隱藏上方需知，只顯示報名表單，並滾動回頂部
     function unlockAndShowForm() {
-        const regSection = document.getElementById("registrationSection");
-        regSection.style.display = "block";
+        document.getElementById("noticeSection").style.display = "none";      // 隱藏需知
+        document.getElementById("registrationSection").style.display = "block"; // 顯示表單
         loadClubOptions();
-        regSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // 重新查看需知
+    // 【核心修正點】：點擊「重新查看需知」
+    // ➔ 隱藏報名表單，重新顯示需知，並滾動回頂部
     function showNoticeAgain() {
-        document.getElementById("noticeSection").scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.getElementById("registrationSection").style.display = "none"; // 隱藏表單
+        document.getElementById("noticeSection").style.display = "block";      // 顯示需知
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     // 手機號碼格式清洗函式
@@ -525,7 +529,6 @@
             return;
         }
 
-        // 鎖定送出按鈕防止重複點擊
         submitBtn.disabled = true;
         submitBtn.innerHTML = `⏳ 系統搶名額鎖定中，請稍候...`;
 
@@ -546,7 +549,7 @@
                 loadClubOptions();
             } else if (result.status === "full") {
                 showAlert("warning", result.message);
-                loadClubOptions(); // 立即將額滿社團剔除
+                loadClubOptions();
             } else if (result.status === "duplicate") {
                 showAlert("danger", result.message);
             } else {
