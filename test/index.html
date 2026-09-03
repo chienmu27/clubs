@@ -99,6 +99,27 @@
             margin: 15px 0;
         }
 
+        /* 醒目計時器樣式 (大字體) */
+        .timer-banner {
+            background-color: #ffeef0;
+            border: 1.5px solid #f5c2c7;
+            color: #dc3545;
+            font-weight: bold;
+            font-size: 1.05rem;
+            padding: 6px 16px;
+            border-radius: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .timer-digits {
+            font-size: 1.6rem;
+            font-family: Consolas, Monaco, "Courier New", monospace;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            line-height: 1;
+        }
+
         /* 自製表單樣式 */
         .form-section {
             max-width: 650px;
@@ -166,6 +187,7 @@
             .doc-mobile-only { display: block; }
             .doc-desktop-only { display: none; }
             .tab-content { padding: 15px; }
+            .timer-banner { width: 100%; justify-content: center; }
         }
     </style>
 </head>
@@ -321,18 +343,27 @@
                     </div>
                 </div>
 
-                <!-- 【階段 3】：自製報名填報表單 (帶有 3 分鐘動態倒數計時) -->
+                <!-- 【階段 3】：自製報名填報表單 (帶有放大版 3 分鐘動態倒數計時) -->
                 <div id="registrationSection" class="form-section pt-2" style="display: none;">
-                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    
+                    <!-- 標題與醒目大字體計時器區塊 -->
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 border-bottom pb-3 gap-2">
                         <div>
-                            <h4 class="fw-bold text-primary mb-0">📝 學生社團線上報名</h4>
+                            <h4 class="fw-bold text-primary mb-1">📝 學生社團線上報名</h4>
                             <small class="text-success fw-bold">🟢 已進入獨立填表名額 (號碼牌 <span id="activeTicketBadge">#</span>)</small>
-                            <!-- 👇 動態 3 分鐘倒數計時紅字標籤 -->
-                            <span class="text-danger fw-bold ms-2">（⚠️ 請於規定時間 <span id="countdownTimer">03:00</span> 內完成）</span>
                         </div>
-                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="showNoticeAgain()">
-                            ⬆️ 重新查看需知
-                        </button>
+                        
+                        <!-- 👇 放大版醒目計時器膠囊 -->
+                        <div class="timer-banner shadow-sm">
+                            <span>⏱️ 填表倒數：</span>
+                            <span id="countdownTimer" class="timer-digits">03:00</span>
+                        </div>
+
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary" type="button" onclick="showNoticeAgain()">
+                                ⬆️ 重新查看需知
+                            </button>
+                        </div>
                     </div>
 
                     <div id="formAlert" class="alert d-none" role="alert"></div>
@@ -453,7 +484,7 @@
 
     let currentMyTicket = sessionStorage.getItem("MY_QUEUE_TICKET") || null;
     let queuePollingTimer = null;
-    let countdownInterval = null; // 倒數計時器計數物件
+    let countdownInterval = null;
 
     function switchToFormTab() {
         const formTab = new bootstrap.Tab(document.getElementById('form-tab'));
@@ -530,7 +561,7 @@
         }
     }
 
-    // 正式解鎖並進入填寫表單 (啟動 3 分鐘倒數)
+    // 正式解鎖並進入填寫表單 (啟動大字體 3 分鐘倒數)
     function enterRegistrationForm() {
         document.getElementById("queueSection").style.display = "none";
         document.getElementById("registrationSection").style.display = "block";
@@ -538,7 +569,6 @@
         loadClubOptions();
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // 啟動 3 分鐘 (180 秒) 動態倒數計時
         startCountdown(180);
     }
 
@@ -576,7 +606,7 @@
     function cleanPhoneNumber(phone) {
         if (!phone) return "";
         let str = String(phone).trim();
-        str = str.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+        str = str.replace(/[０-奪]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
         str = str.replace(/[\s\-\(\)\+]/g, "");
         if (str.startsWith("8869")) str = "0" + str.substring(3);
         return str;
@@ -664,7 +694,7 @@
             submitBtn.innerHTML = `🚀 確認並送出報名`;
 
             if (result.status === "success") {
-                if (countdownInterval) clearInterval(countdownInterval); // 成功送出後停止計時
+                if (countdownInterval) clearInterval(countdownInterval);
                 showAlert("success", result.message);
                 document.getElementById("signupForm").reset();
                 sessionStorage.removeItem("MY_QUEUE_TICKET");
