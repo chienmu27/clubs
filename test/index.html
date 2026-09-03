@@ -81,7 +81,7 @@
             margin-bottom: 20px;
         }
 
-        /* 【核心修正】：彈性排版容器，確保手機版文字與方塊永遠排在同一行開頭 */
+        /* 彈性排版容器，確保手機版文字與方塊永遠排在同一行開頭 */
         .agree-container {
             display: inline-flex;
             align-items: center;
@@ -93,12 +93,12 @@
         .agree-checkbox-custom {
             width: 1.4em !important;
             height: 1.4em !important;
-            min-width: 1.4em !important; /* 👈 防止在手機窄螢幕被擠壓 */
+            min-width: 1.4em !important;
             border: 2px solid #4e73df !important;
             cursor: pointer;
             margin-top: 0 !important;
-            flex-shrink: 0; /* 👈 防止被縮小 */
-            float: none !important; /* 👈 移除預設 float 避免排版錯位 */
+            flex-shrink: 0;
+            float: none !important;
         }
         .agree-checkbox-custom:hover {
             border-color: #224abe !important;
@@ -343,7 +343,6 @@
                     </div>
 
                     <div class="card p-3 bg-light border text-center my-3 shadow-sm">
-                        <!-- 👇 修正為彈性容器，確保文字緊接在方塊後方不換行 -->
                         <div class="agree-container mb-3">
                             <input class="form-check-input agree-checkbox-custom me-2" type="checkbox" id="agreeCheckbox" onchange="toggleAgreeButton()">
                             <label class="form-check-label fw-bold text-dark fs-6 agree-label-custom" for="agreeCheckbox">
@@ -378,7 +377,7 @@
                     </div>
                 </div>
 
-                <!-- 【階段 3】：自製報名填報表單 (帶有放大版 3 分鐘動態倒數計時) -->
+                <!-- 【階段 3】：自製報名填報表單 (帶有絕對時間倒數計時) -->
                 <div id="registrationSection" class="form-section pt-2" style="display: none;">
                     
                     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 border-bottom pb-3 gap-2">
@@ -516,7 +515,8 @@
     // 🔗 請確認此網址為 Google Apps Script 發布的 Web App 網址
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyop4CtIrPQW2bG3_GX3GeXSCZoyD27vX9Mz7JsAaOe2gv972IZ26Swl6RlPh51x0Hc/exec";
 
-    // 取得暫存排隊號碼（防呆：過濾無效字串）
+    const FILLING_DURATION_SECONDS = 180; // 填表時限：3 分鐘 (180秒)
+
     let savedTicket = sessionStorage.getItem("MY_QUEUE_TICKET");
     let currentMyTicket = (savedTicket && savedTicket !== "null" && savedTicket !== "undefined" && !isNaN(savedTicket)) ? Number(savedTicket) : null;
     
@@ -613,7 +613,7 @@
         }
     }
 
-    // 正式進入填寫表單
+    // 【核心修正】：正式進入填寫表單 (記錄絕對時間，防 F5 刷新作弊)
     function enterRegistrationForm() {
         if (queuePollingTimer) clearInterval(queuePollingTimer);
         document.getElementById("queueSection").style.display = "none";
@@ -626,30 +626,67 @@
         loadClubOptions();
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        startCountdown(180);
+        // 取得或建立開始時間戳記 (Timestamp)
+        let startTime = sessionStorage.getItem("QUEUE_START_TIME");
+        const now = Date.now();
+
+        if (!startTime) {
+            startTime = now;
+            sessionStorage.setItem("QUEUE_START_TIME", startTime);
+        } else {
+            startTime = Number(startTime);
+        }
+
+        // 計算實際已過秒數與剩餘秒數
+        const elapsed = Math.floor((now - startTime) / 1000);
+        const remaining = FILLING_DURATION_SECONDS - elapsed;
+
+        if (remaining <= 0) {
+            // 已超過 3 分鐘，就算重整也直接判定逾時！
+            handleTimeoutExpiry();
+        } else {
+            // 從剩餘時間開始倒數
+            startCountdown(remaining);
+        }
     }
 
     // 動態倒數計時函式
-    function startCountdown(seconds) {
+    function startCountdown(remainingSeconds) {
         if (countdownInterval) clearInterval(countdownInterval);
-        let timeLeft = seconds;
+        
         const timerDisplay = document.getElementById("countdownTimer");
+        const startTime = Number(sessionStorage.getItem("QUEUE_START_TIME"));
 
-        countdownInterval = setInterval(() => {
-            let mins = Math.floor(timeLeft / 60);
-            let secs = timeLeft % 60;
+        function updateTimer() {
+            const now = Date.now();
+            const elapsed = Math.floor((now - startTime) / 1000);
+            const currentRemaining = FILLING_DURATION_SECONDS - elapsed;
+
+            if (currentRemaining <= 0) {
+                handleTimeoutExpiry();
+                return;
+            }
+
+            let mins = Math.floor(currentRemaining / 60);
+            let secs = currentRemaining % 60;
             if (timerDisplay) {
                 timerDisplay.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             }
+        }
 
-            if (timeLeft <= 0) {
-                clearInterval(countdownInterval);
-                alert("⏰ 填表時間已超過 3 分鐘，為確保名額順暢，系統即將重新載入！");
-                sessionStorage.removeItem("MY_QUEUE_TICKET");
-                location.reload();
-            }
-            timeLeft--;
-        }, 1000);
+        updateTimer();
+        countdownInterval = setInterval(updateTimer, 1000);
+    }
+
+    // 處理填表逾時
+    function handleTimeoutExpiry() {
+        if (countdownInterval) clearInterval(countdownInterval);
+        alert("⏰ 您的 3 分鐘填表時間已過期，請重新排隊領號！");
+        // 清除號碼與開始時間
+        sessionStorage.removeItem("MY_QUEUE_TICKET");
+        sessionStorage.removeItem("QUEUE_START_TIME");
+        currentMyTicket = null;
+        location.reload();
     }
 
     function showNoticeAgain() {
@@ -754,8 +791,12 @@
                 if (countdownInterval) clearInterval(countdownInterval);
                 showAlert("success", result.message);
                 document.getElementById("signupForm").reset();
+                
+                // 成功報名後清除暫存號碼與計時
                 sessionStorage.removeItem("MY_QUEUE_TICKET");
+                sessionStorage.removeItem("QUEUE_START_TIME");
                 currentMyTicket = null;
+                
                 loadClubOptions();
             } else if (result.status === "full") {
                 showAlert("warning", result.message);
