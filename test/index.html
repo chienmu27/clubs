@@ -81,13 +81,24 @@
             margin-bottom: 20px;
         }
 
+        /* 【核心修正】：彈性排版容器，確保手機版文字與方塊永遠排在同一行開頭 */
+        .agree-container {
+            display: inline-flex;
+            align-items: center;
+            text-align: left;
+            max-width: 100%;
+        }
+
         /* 加深且放大的同意核取方塊樣式 */
         .agree-checkbox-custom {
             width: 1.4em !important;
             height: 1.4em !important;
-            border: 2px solid #4e73df !important; /* 👈 加深邊框顏色並加粗 */
+            min-width: 1.4em !important; /* 👈 防止在手機窄螢幕被擠壓 */
+            border: 2px solid #4e73df !important;
             cursor: pointer;
-            vertical-align: middle;
+            margin-top: 0 !important;
+            flex-shrink: 0; /* 👈 防止被縮小 */
+            float: none !important; /* 👈 移除預設 float 避免排版錯位 */
         }
         .agree-checkbox-custom:hover {
             border-color: #224abe !important;
@@ -96,6 +107,12 @@
         .agree-checkbox-custom:checked {
             background-color: #4e73df !important;
             border-color: #4e73df !important;
+        }
+        .agree-label-custom {
+            cursor: pointer;
+            line-height: 1.4;
+            margin-bottom: 0;
+            user-select: none;
         }
 
         /* 排隊等候室樣式 */
@@ -326,10 +343,10 @@
                     </div>
 
                     <div class="card p-3 bg-light border text-center my-3 shadow-sm">
-                        <div class="form-check d-inline-block text-start mb-3">
-                            <!-- 👇 顏色加深、尺寸放大的 Checkbox -->
+                        <!-- 👇 修正為彈性容器，確保文字緊接在方塊後方不換行 -->
+                        <div class="agree-container mb-3">
                             <input class="form-check-input agree-checkbox-custom me-2" type="checkbox" id="agreeCheckbox" onchange="toggleAgreeButton()">
-                            <label class="form-check-label fw-bold text-dark fs-6" for="agreeCheckbox" style="cursor: pointer; vertical-align: middle;">
+                            <label class="form-check-label fw-bold text-dark fs-6 agree-label-custom" for="agreeCheckbox">
                                 我已詳閱並同意上述社團活動需知與退費辦法規定
                             </label>
                         </div>
