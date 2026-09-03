@@ -254,7 +254,7 @@
                     </div>
 
                     <div class="text-center mt-4">
-                        <button class="btn btn-outline-primary btn-lg px-4" onclick="switchToFormTab()">
+                        <button type="button" class="btn btn-outline-primary btn-lg px-4" onclick="switchToFormTab()">
                             前往「線上報名」填寫表單 &raquo;
                         </button>
                     </div>
@@ -316,7 +316,7 @@
                             </label>
                         </div>
                         <div>
-                            <button id="agreeBtn" class="btn btn-primary btn-lg px-5" disabled onclick="requestQueueEntry()">
+                            <button type="button" id="agreeBtn" class="btn btn-primary btn-lg px-5" disabled onclick="requestQueueEntry()">
                                 我已閱讀，排隊進入報名 &raquo;
                             </button>
                         </div>
@@ -346,14 +346,13 @@
                 <!-- 【階段 3】：自製報名填報表單 (帶有放大版 3 分鐘動態倒數計時) -->
                 <div id="registrationSection" class="form-section pt-2" style="display: none;">
                     
-                    <!-- 標題與醒目大字體計時器區塊 -->
                     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 border-bottom pb-3 gap-2">
                         <div>
                             <h4 class="fw-bold text-primary mb-1">📝 學生社團線上報名</h4>
                             <small class="text-success fw-bold">🟢 已進入獨立填表名額 (號碼牌 <span id="activeTicketBadge">#</span>)</small>
                         </div>
                         
-                        <!-- 👇 放大版醒目計時器膠囊 -->
+                        <!-- 放大版醒目計時器膠囊 -->
                         <div class="timer-banner shadow-sm">
                             <span>⏱️ 填表倒數：</span>
                             <span id="countdownTimer" class="timer-digits">03:00</span>
@@ -482,36 +481,48 @@
     // 🔗 請確認此網址為 Google Apps Script 發布的 Web App 網址
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyop4CtIrPQW2bG3_GX3GeXSCZoyD27vX9Mz7JsAaOe2gv972IZ26Swl6RlPh51x0Hc/exec";
 
-    let currentMyTicket = sessionStorage.getItem("MY_QUEUE_TICKET") || null;
+    // 取得暫存排隊號碼（防呆：過濾無效字串）
+    let savedTicket = sessionStorage.getItem("MY_QUEUE_TICKET");
+    let currentMyTicket = (savedTicket && savedTicket !== "null" && savedTicket !== "undefined" && !isNaN(savedTicket)) ? Number(savedTicket) : null;
+    
     let queuePollingTimer = null;
     let countdownInterval = null;
 
+    // 【修正 1】：更穩定的 Tab 切換方式 (直接觸發點擊)
     function switchToFormTab() {
-        const formTab = new bootstrap.Tab(document.getElementById('form-tab'));
-        formTab.show();
+        const tabBtn = document.getElementById('form-tab');
+        if (tabBtn) {
+            tabBtn.click();
+        }
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    // 勾選核取方塊解鎖按鈕
     function toggleAgreeButton() {
         const checkbox = document.getElementById("agreeCheckbox");
         const agreeBtn = document.getElementById("agreeBtn");
-        agreeBtn.disabled = !checkbox.checked;
+        if (checkbox && agreeBtn) {
+            agreeBtn.disabled = !checkbox.checked;
+        }
     }
 
     // ==========================================================
-    // 1. 排隊取號與狀態輪詢邏輯
+    // 1. 排隊取號與狀態輪詢邏輯 (已強化錯誤處理與即時切換)
     // ==========================================================
     async function requestQueueEntry() {
+        // 1. 立即切換 UI，隱藏需知並顯示排隊畫面
         document.getElementById("noticeSection").style.display = "none";
         document.getElementById("queueSection").style.display = "block";
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
+        // 2. 若沒有有效號碼牌，向後端領取
         if (!currentMyTicket) {
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=getTicket&_t=${Date.now()}`);
                 const json = await res.json();
-                if (json.status === "success") {
-                    currentMyTicket = json.data.ticket;
+
+                if (json.status === "success" && json.data) {
+                    currentMyTicket = Number(json.data.ticket);
                     sessionStorage.setItem("MY_QUEUE_TICKET", currentMyTicket);
                     updateQueueUI(json.data);
 
@@ -520,12 +531,16 @@
                     } else {
                         startQueuePolling();
                     }
+                } else {
+                    // 若後端回傳異常，直接放行進入表單 (降級保護機制)
+                    enterRegistrationForm();
                 }
             } catch (err) {
-                document.getElementById("queueStatusText").innerText = "連線異常，正在重新排隊...";
-                setTimeout(requestQueueEntry, 2000);
+                console.warn("取號連線異常，直接進入表單：", err);
+                enterRegistrationForm();
             }
         } else {
+            // 已有號碼，直接檢查進度
             checkCurrentQueueStatus();
         }
     }
@@ -536,11 +551,14 @@
     }
 
     async function checkCurrentQueueStatus() {
-        if (!currentMyTicket) return;
+        if (!currentMyTicket) {
+            enterRegistrationForm();
+            return;
+        }
         try {
             const res = await fetch(`${SCRIPT_URL}?action=checkQueue&ticket=${currentMyTicket}&_t=${Date.now()}`);
             const json = await res.json();
-            if (json.status === "success") {
+            if (json.status === "success" && json.data) {
                 updateQueueUI(json.data);
                 if (json.data.canEnter) {
                     if (queuePollingTimer) clearInterval(queuePollingTimer);
@@ -548,27 +566,38 @@
                 }
             }
         } catch (err) {
-            console.log("排隊輪詢中...");
+            console.log("排隊輪詢檢查中...");
         }
     }
 
     function updateQueueUI(data) {
-        document.getElementById("displayTicket").innerText = `#${data.ticket}`;
-        if (data.canEnter) {
-            document.getElementById("queueStatusText").innerHTML = `<span class="text-success">🎉 輪到您了！正在為您開啟表單...</span>`;
-        } else {
-            document.getElementById("queueStatusText").innerHTML = `您前方尚有 <strong>${data.aheadCount}</strong> 位家長在排隊，請稍候...`;
+        const ticketElem = document.getElementById("displayTicket");
+        const statusElem = document.getElementById("queueStatusText");
+        if (ticketElem) ticketElem.innerText = `#${data.ticket}`;
+        
+        if (statusElem) {
+            if (data.canEnter) {
+                statusElem.innerHTML = `<span class="text-success">🎉 輪到您了！正在為您開啟表單...</span>`;
+            } else {
+                statusElem.innerHTML = `您前方尚有 <strong>${data.aheadCount}</strong> 位家長在排隊，請稍候...`;
+            }
         }
     }
 
-    // 正式解鎖並進入填寫表單 (啟動大字體 3 分鐘倒數)
+    // 正式進入填寫表單
     function enterRegistrationForm() {
+        if (queuePollingTimer) clearInterval(queuePollingTimer);
         document.getElementById("queueSection").style.display = "none";
+        document.getElementById("noticeSection").style.display = "none";
         document.getElementById("registrationSection").style.display = "block";
-        document.getElementById("activeTicketBadge").innerText = `#${currentMyTicket}`;
+        
+        const badge = document.getElementById("activeTicketBadge");
+        if (badge) badge.innerText = currentMyTicket ? `#${currentMyTicket}` : `#1`;
+        
         loadClubOptions();
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
+        // 啟動 3 分鐘 (180 秒) 倒數計時
         startCountdown(180);
     }
 
@@ -603,10 +632,11 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    // 【修正 3】：修復全形數字正規表達式 [０-９]
     function cleanPhoneNumber(phone) {
         if (!phone) return "";
         let str = String(phone).trim();
-        str = str.replace(/[０-奪]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+        str = str.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
         str = str.replace(/[\s\-\(\)\+]/g, "");
         if (str.startsWith("8869")) str = "0" + str.substring(3);
         return str;
@@ -698,6 +728,7 @@
                 showAlert("success", result.message);
                 document.getElementById("signupForm").reset();
                 sessionStorage.removeItem("MY_QUEUE_TICKET");
+                currentMyTicket = null;
                 loadClubOptions();
             } else if (result.status === "full") {
                 showAlert("warning", result.message);
