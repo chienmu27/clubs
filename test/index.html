@@ -81,6 +81,24 @@
             margin-bottom: 20px;
         }
 
+        /* 排隊等候室樣式 */
+        .queue-box {
+            max-width: 550px;
+            margin: 20px auto;
+            padding: 30px;
+            border-radius: 15px;
+            background: #fdfdfd;
+            border: 2px dashed #4e73df;
+            text-align: center;
+        }
+        .ticket-number {
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: #4e73df;
+            line-height: 1;
+            margin: 15px 0;
+        }
+
         /* 自製表單樣式 */
         .form-section {
             max-width: 650px;
@@ -160,7 +178,7 @@
             🏫 社團報名與查詢系統
         </div>
 
-        <!-- 3 個分頁導航：社團項目(預設) ➔ 線上報名 ➔ 報名查詢 -->
+        <!-- 分頁導航 -->
         <ul class="nav nav-tabs nav-fill" id="myTab" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="pdf-tab" data-bs-toggle="tab" data-bs-target="#pdf-pane" type="button" role="tab">
@@ -179,45 +197,40 @@
             </li>
         </ul>
 
-        <!-- 分頁內容 -->
         <div class="tab-content" id="myTabContent">
 
             <!-- ==========================================
-                 分頁 1：社團項目 (預設開啟，顯示簡章 PDF/JPG)
+                 分頁 1：社團項目 (預設開啟)
                  ========================================== -->
             <div class="tab-pane fade show active" id="pdf-pane" role="tabpanel">
                 <div class="p-2">
                     <div class="alert alert-info d-flex align-items-center justify-content-between" role="alert">
                         <div class="d-flex align-items-center">
                             <span class="me-2 fs-5">📄</span>
-                            <span>若簡章檔案無法正常預覽，請點擊右側按鈕另開檢視：</span>
+                            <span>若簡章無法正常預覽，請點擊右側按鈕另開檢視：</span>
                         </div>
-                        <a id="docDownloadLink" href="https://drive.google.com/file/d/1iRE8f2t9WnkBAcm03U3-HMISPUmFic8C/view?usp=drive_link" 
+                        <a href="https://drive.google.com/file/d/1iRE8f2t9WnkBAcm03U3-HMISPUmFic8C/view?usp=drive_link" 
                            target="_blank" rel="noopener" class="btn btn-sm btn-primary text-nowrap ms-2">
                             開啟簡章檔案
                         </a>
                     </div>
 
-                    <!-- 手機版：大按鈕開啟 -->
                     <div class="doc-mobile-only text-center my-3">
-                        <a id="docMobileBtn" class="btn btn-primary btn-lg w-100 py-3"
+                        <a class="btn btn-primary btn-lg w-100 py-3"
                            href="https://drive.google.com/file/d/1iRE8f2t9WnkBAcm03U3-HMISPUmFic8C/view?usp=drive_link"
                            target="_blank" rel="noopener">
                             📄 點我開啟社團招生簡章 (PDF/圖片)
                         </a>
                     </div>
 
-                    <!-- 桌機版：直接內嵌預覽 -->
                     <div class="doc-desktop-only doc-wrapper">
                         <iframe
-                            id="docIframe"
                             src="https://drive.google.com/file/d/1GqJAuw681E547tOfu5upwUwPTfBS6dSB/preview"
                             title="社團招生簡章"
                             allow="autoplay">
                         </iframe>
                     </div>
 
-                    <!-- 底部前往報名快捷按鈕 -->
                     <div class="text-center mt-4">
                         <button class="btn btn-outline-primary btn-lg px-4" onclick="switchToFormTab()">
                             前往「線上報名」填寫表單 &raquo;
@@ -227,13 +240,12 @@
             </div>
 
             <!-- ==========================================
-                 分頁 2：線上報名 (需知同意 ➔ 切換顯示填報表單)
+                 分頁 2：線上報名 (需知 ➔ 排隊等候室 ➔ 填報表單)
                  ========================================== -->
             <div class="tab-pane fade" id="form-pane" role="tabpanel">
                 
-                <!-- 【第一階段】：完整報名需知與退費規定 -->
+                <!-- 【階段 1】：完整報名需知與退費規定 -->
                 <div id="noticeSection" class="info-section p-2">
-                    <!-- 重要提醒區塊 -->
                     <div class="highlight-box">
                         <strong>⚠️ 重要提醒：</strong> 請務必確認學生年級是否符合社團招收規定，重複報名者將以最後一次提交的時間為準。
                     </div>
@@ -270,12 +282,10 @@
                     </ul>
 
                     <hr class="my-4">
-
                     <div class="text-muted small mb-4">
                         三、本辦法經校務會議通過後，呈 校長核可後施行。
                     </div>
 
-                    <!-- 勾選閱讀與前往報名按鈕 -->
                     <div class="card p-3 bg-light border text-center my-3 shadow-sm">
                         <div class="form-check d-inline-block text-start mb-3">
                             <input class="form-check-input" type="checkbox" id="agreeCheckbox" onchange="toggleAgreeButton()">
@@ -284,27 +294,49 @@
                             </label>
                         </div>
                         <div>
-                            <button id="agreeBtn" class="btn btn-primary btn-lg px-5" disabled onclick="unlockAndShowForm()">
-                                我已閱讀，前往報名 &raquo;
+                            <button id="agreeBtn" class="btn btn-primary btn-lg px-5" disabled onclick="requestQueueEntry()">
+                                我已閱讀，排隊進入報名 &raquo;
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- 【第二階段】：自製報名填報表單 (勾選同意後顯示，需知自動隱藏) -->
+                <!-- 【階段 2】：虛擬排隊等候室 (一批10人，依序放行) -->
+                <div id="queueSection" class="queue-box shadow-sm" style="display: none;">
+                    <div class="spinner-border text-primary my-2" style="width: 3.5rem; height: 3.5rem;" role="status"></div>
+                    <h3 class="fw-bold text-dark mt-3">線上報名排隊等候中</h3>
+                    <p class="text-muted">為維護系統順暢，系統依點擊順序依序放行（每批 10 名）。</p>
+                    
+                    <div class="card bg-light p-3 my-3 border-0">
+                        <div class="text-muted small">您的排隊號碼牌</div>
+                        <div id="displayTicket" class="ticket-number">#--</div>
+                        <div id="queueStatusText" class="fw-bold text-primary fs-5">
+                            正在為您確認排隊順序...
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning small text-start mb-0">
+                        ⏳ <strong>請保持此畫面開啟，請勿關閉網頁！</strong><br>
+                        輪到您的號碼時，系統會自動切換至填報頁面。
+                    </div>
+                </div>
+
+                <!-- 【階段 3】：自製報名填報表單 -->
                 <div id="registrationSection" class="form-section pt-2" style="display: none;">
                     <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                        <h4 class="fw-bold text-primary mb-0">📝 學生社團線上報名</h4>
+                        <div>
+                            <h4 class="fw-bold text-primary mb-0">📝 學生社團線上報名</h4>
+                            <small class="text-success fw-bold">🟢 已進入獨立填表名額 (號碼牌 <span id="activeTicketBadge">#</span>)</small>
+                        </div>
                         <button class="btn btn-sm btn-outline-secondary" type="button" onclick="showNoticeAgain()">
                             ⬆️ 重新查看需知
                         </button>
                     </div>
 
-                    <!-- 報名結果提示訊息 -->
                     <div id="formAlert" class="alert d-none" role="alert"></div>
 
                     <form id="signupForm" onsubmit="submitRegistration(event)">
-                        <!-- 社團選擇 (動態載入未額滿選項) -->
+                        <!-- 社團選擇 -->
                         <div class="mb-3">
                             <label for="clubSelect" class="form-label">選擇社團項目<span class="required-star">*</span></label>
                             <div class="input-group">
@@ -318,9 +350,8 @@
                             <div class="form-text text-muted">系統已自動隱藏額滿社團，若選項無顯示代表已無名額。</div>
                         </div>
 
-                        <!-- 學生年級、班級、座號 (改為下拉選單) -->
+                        <!-- 學生年級、班級、座號 -->
                         <div class="row g-2 mb-3">
-                            <!-- 年級：一年、二年、三年、四年、五年、六年 -->
                             <div class="col-4">
                                 <label for="gradeInput" class="form-label">年級<span class="required-star">*</span></label>
                                 <select class="form-select form-select-lg" id="gradeInput" required>
@@ -333,7 +364,6 @@
                                     <option value="六年">六年</option>
                                 </select>
                             </div>
-                            <!-- 班級：一班、二班、三班、四班 -->
                             <div class="col-4">
                                 <label for="classInput" class="form-label">班級<span class="required-star">*</span></label>
                                 <select class="form-select form-select-lg" id="classInput" required>
@@ -344,7 +374,6 @@
                                     <option value="四班">四班</option>
                                 </select>
                             </div>
-                            <!-- 座號 -->
                             <div class="col-4">
                                 <label for="seatInput" class="form-label">座號<span class="required-star">*</span></label>
                                 <input type="number" class="form-control form-select-lg" id="seatInput" placeholder="例：05" min="1" max="50" required>
@@ -420,40 +449,103 @@
     // 🔗 請確認此網址為 Google Apps Script 發布的 Web App 網址
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyop4CtIrPQW2bG3_GX3GeXSCZoyD27vX9Mz7JsAaOe2gv972IZ26Swl6RlPh51x0Hc/exec";
 
-    // -------------------------------------------------------------
-    // 分頁切換與需知同意控制
-    // -------------------------------------------------------------
+    let currentMyTicket = sessionStorage.getItem("MY_QUEUE_TICKET") || null;
+    let queuePollingTimer = null;
+
     function switchToFormTab() {
         const formTab = new bootstrap.Tab(document.getElementById('form-tab'));
         formTab.show();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // 監聽勾選狀態，解鎖「我已閱讀，前往報名」按鈕
     function toggleAgreeButton() {
         const checkbox = document.getElementById("agreeCheckbox");
         const agreeBtn = document.getElementById("agreeBtn");
         agreeBtn.disabled = !checkbox.checked;
     }
 
-    // 【核心修正點】：點擊「我已閱讀，前往報名」
-    // ➔ 隱藏上方需知，只顯示報名表單，並滾動回頂部
-    function unlockAndShowForm() {
-        document.getElementById("noticeSection").style.display = "none";      // 隱藏需知
-        document.getElementById("registrationSection").style.display = "block"; // 顯示表單
+    // ==========================================================
+    // 1. 排隊取號與狀態輪詢邏輯
+    // ==========================================================
+    async function requestQueueEntry() {
+        // 隱藏需知，顯示排隊等候室
+        document.getElementById("noticeSection").style.display = "none";
+        document.getElementById("queueSection").style.display = "block";
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // 若已有號碼牌則直接檢查，沒有則向後端領取
+        if (!currentMyTicket) {
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=getTicket&_t=${Date.now()}`);
+                const json = await res.json();
+                if (json.status === "success") {
+                    currentMyTicket = json.data.ticket;
+                    sessionStorage.setItem("MY_QUEUE_TICKET", currentMyTicket);
+                    updateQueueUI(json.data);
+
+                    if (json.data.canEnter) {
+                        enterRegistrationForm();
+                    } else {
+                        startQueuePolling();
+                    }
+                }
+            } catch (err) {
+                document.getElementById("queueStatusText").innerText = "連線異常，正在重新排隊...";
+                setTimeout(requestQueueEntry, 2000);
+            }
+        } else {
+            checkCurrentQueueStatus();
+        }
+    }
+
+    // 輪詢檢查排隊進度 (每 2.5 秒)
+    function startQueuePolling() {
+        if (queuePollingTimer) clearInterval(queuePollingTimer);
+        queuePollingTimer = setInterval(checkCurrentQueueStatus, 2500);
+    }
+
+    async function checkCurrentQueueStatus() {
+        if (!currentMyTicket) return;
+        try {
+            const res = await fetch(`${SCRIPT_URL}?action=checkQueue&ticket=${currentMyTicket}&_t=${Date.now()}`);
+            const json = await res.json();
+            if (json.status === "success") {
+                updateQueueUI(json.data);
+                if (json.data.canEnter) {
+                    if (queuePollingTimer) clearInterval(queuePollingTimer);
+                    enterRegistrationForm();
+                }
+            }
+        } catch (err) {
+            console.log("排隊輪詢中...");
+        }
+    }
+
+    function updateQueueUI(data) {
+        document.getElementById("displayTicket").innerText = `#${data.ticket}`;
+        if (data.canEnter) {
+            document.getElementById("queueStatusText").innerHTML = `<span class="text-success">🎉 輪到您了！正在為您開啟表單...</span>`;
+        } else {
+            document.getElementById("queueStatusText").innerHTML = `您前方尚有 <strong>${data.aheadCount}</strong> 位家長在排隊，請稍候...`;
+        }
+    }
+
+    // 正式解鎖並進入填寫表單
+    function enterRegistrationForm() {
+        document.getElementById("queueSection").style.display = "none";
+        document.getElementById("registrationSection").style.display = "block";
+        document.getElementById("activeTicketBadge").innerText = `#${currentMyTicket}`;
         loadClubOptions();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // 【核心修正點】：點擊「重新查看需知」
-    // ➔ 隱藏報名表單，重新顯示需知，並滾動回頂部
     function showNoticeAgain() {
-        document.getElementById("registrationSection").style.display = "none"; // 隱藏表單
-        document.getElementById("noticeSection").style.display = "block";      // 顯示需知
+        document.getElementById("registrationSection").style.display = "none";
+        document.getElementById("queueSection").style.display = "none";
+        document.getElementById("noticeSection").style.display = "block";
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // 手機號碼格式清洗函式
     function cleanPhoneNumber(phone) {
         if (!phone) return "";
         let str = String(phone).trim();
@@ -464,7 +556,7 @@
     }
 
     // ==========================================================
-    // 1. 動態載入未額滿社團選項 (GET)
+    // 2. 動態載入未額滿社團選項
     // ==========================================================
     async function loadClubOptions(showToast = false) {
         const select = document.getElementById("clubSelect");
@@ -497,7 +589,7 @@
     }
 
     // ==========================================================
-    // 2. 表單送出 (POST 搶名額鎖定)
+    // 3. 表單送出 (POST 搶名額鎖定 + 推進隊列)
     // ==========================================================
     async function submitRegistration(e) {
         e.preventDefault();
@@ -515,6 +607,7 @@
         }
 
         const payload = {
+            ticket: currentMyTicket,
             club: document.getElementById("clubSelect").value,
             grade: document.getElementById("gradeInput").value,
             class_name: document.getElementById("classInput").value,
@@ -546,6 +639,7 @@
             if (result.status === "success") {
                 showAlert("success", result.message);
                 document.getElementById("signupForm").reset();
+                sessionStorage.removeItem("MY_QUEUE_TICKET"); // 完成後清除號碼牌
                 loadClubOptions();
             } else if (result.status === "full") {
                 showAlert("warning", result.message);
@@ -571,7 +665,7 @@
     }
 
     // ==========================================================
-    // 3. 手機查詢功能
+    // 4. 手機查詢功能
     // ==========================================================
     function handleEnter(event) { if (event.key === "Enter") searchData(); }
 
