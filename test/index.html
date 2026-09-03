@@ -126,27 +126,27 @@
             font-size: 1.3rem;
         }
 
-        /* PDF 樣式 */
-        .pdf-wrapper {
+        /* 檔案預覽 (PDF / 圖片) */
+        .doc-wrapper {
             width: 100%;
-            height: 1200px;
+            height: 1000px;
             border-radius: 12px;
             overflow: hidden;
             border: 1px solid #e5e7eb;
             background: #fff;
         }
-        .pdf-wrapper iframe {
+        .doc-wrapper iframe {
             width: 100%;
             height: 100%;
             border: 0;
             display: block;
         }
-        .pdf-mobile-only { display: none; }
-        .pdf-desktop-only { display: block; }
+        .doc-mobile-only { display: none; }
+        .doc-desktop-only { display: block; }
 
         @media (max-width: 768px) {
-            .pdf-mobile-only { display: block; }
-            .pdf-desktop-only { display: none; }
+            .doc-mobile-only { display: block; }
+            .doc-desktop-only { display: none; }
             .tab-content { padding: 15px; }
         }
     </style>
@@ -160,15 +160,10 @@
             🏫 社團報名與查詢系統
         </div>
 
-        <!-- 分頁導航 -->
+        <!-- 3 個分頁導航：社團項目(預設) ➔ 線上報名 ➔ 報名查詢 -->
         <ul class="nav nav-tabs nav-fill" id="myTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info-pane" type="button" role="tab">
-                    📢 報名需知
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="pdf-tab" data-bs-toggle="tab" data-bs-target="#pdf-pane" type="button" role="tab">
+                <button class="nav-link active" id="pdf-tab" data-bs-toggle="tab" data-bs-target="#pdf-pane" type="button" role="tab">
                     📄 社團項目
                 </button>
             </li>
@@ -187,69 +182,122 @@
         <!-- 分頁內容 -->
         <div class="tab-content" id="myTabContent">
 
-            <!-- 1. 報名需知 -->
-            <div class="tab-pane fade show active info-section p-2" id="info-pane" role="tabpanel">
-                <div class="highlight-box">
-                    <strong>⚠️ 重要提醒：</strong> 請務必確認學生年級是否符合社團招收規定，每位學生同一個社團僅能報名一次。
-                </div>
-                <div class="highlight-box">
-                    <strong>⚠️ 重要公告：</strong> 下學期社團活動為期 <strong>15週</strong>。
-                    <br>
-                    收費暫以 10 人計算，若不足 10 人不開課；超過 10 人將向下調整費用。
-                </div>
-
-                <h4>⛔ 注意事項</h4>
-                <ul>
-                    <li><strong>接送安全：</strong> 請家長務必準時接送孩子回家。</li>
-                    <li><strong>費用優惠：</strong> 具低收入戶證明學生，得享有學費 <strong>5折</strong> 優惠。</li>
-                    <li><strong>審慎報名：</strong> 指導費以人數分攤計算，名額有限額滿為止。</li>
-                </ul>
-
-                <hr class="my-4">
-                <div class="text-center mt-4">
-                    <button class="btn btn-primary btn-lg px-4" onclick="goToFormTab()">
-                        我已閱讀，前往報名 &raquo;
-                    </button>
-                </div>
-            </div>
-
-            <!-- 2. PDF 招生簡章 -->
-            <div class="tab-pane fade" id="pdf-pane" role="tabpanel">
+            <!-- ==========================================
+                 分頁 1：社團項目 (預設開啟，顯示簡章 PDF/JPG)
+                 ========================================== -->
+            <div class="tab-pane fade show active" id="pdf-pane" role="tabpanel">
                 <div class="p-2">
-                    <div class="alert alert-info d-flex align-items-center" role="alert">
-                        <div class="me-2">📄</div>
-                        <div>
-                            若 PDF 無法顯示，請點此
-                            <a href="https://drive.google.com/file/d/1iRE8f2t9WnkBAcm03U3-HMISPUmFic8C/view?usp=drive_link" target="_blank" rel="noopener">
-                                開啟招生簡章
-                            </a>
+                    <div class="alert alert-info d-flex align-items-center justify-content-between" role="alert">
+                        <div class="d-flex align-items-center">
+                            <span class="me-2 fs-5">📄</span>
+                            <span>若簡章檔案無法正常預覽，請點擊右側按鈕另開檢視：</span>
                         </div>
-                    </div>
-
-                    <div class="pdf-mobile-only text-center">
-                        <a class="btn btn-primary btn-lg w-100"
-                           href="https://drive.google.com/file/d/1iRE8f2t9WnkBAcm03U3-HMISPUmFic8C/view?usp=drive_link"
-                           target="_blank" rel="noopener">
-                            📄 點我開啟招生簡章 PDF
+                        <a id="docDownloadLink" href="https://drive.google.com/file/d/1iRE8f2t9WnkBAcm03U3-HMISPUmFic8C/view?usp=drive_link" 
+                           target="_blank" rel="noopener" class="btn btn-sm btn-primary text-nowrap ms-2">
+                            開啟簡章檔案
                         </a>
                     </div>
 
-                    <div class="pdf-desktop-only pdf-wrapper">
+                    <!-- 手機版：大按鈕開啟 -->
+                    <div class="doc-mobile-only text-center my-3">
+                        <a id="docMobileBtn" class="btn btn-primary btn-lg w-100 py-3"
+                           href="https://drive.google.com/file/d/1iRE8f2t9WnkBAcm03U3-HMISPUmFic8C/view?usp=drive_link"
+                           target="_blank" rel="noopener">
+                            📄 點我開啟社團招生簡章 (PDF/圖片)
+                        </a>
+                    </div>
+
+                    <!-- 桌機版：直接內嵌預覽 -->
+                    <div class="doc-desktop-only doc-wrapper">
                         <iframe
+                            id="docIframe"
                             src="https://drive.google.com/file/d/1GqJAuw681E547tOfu5upwUwPTfBS6dSB/preview"
-                            title="社團招生簡章 PDF"
+                            title="社團招生簡章"
                             allow="autoplay">
                         </iframe>
+                    </div>
+
+                    <!-- 底部前往報名快捷按鈕 -->
+                    <div class="text-center mt-4">
+                        <button class="btn btn-outline-primary btn-lg px-4" onclick="switchToFormTab()">
+                            前往「線上報名」填寫表單 &raquo;
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <!-- 3. 純自製線上報名表單 (取代 iframe) -->
+            <!-- ==========================================
+                 分頁 2：線上報名 (需知閱讀同意 ➔ 展開填報表單)
+                 ========================================== -->
             <div class="tab-pane fade" id="form-pane" role="tabpanel">
-                <div class="form-section">
-                    <div class="text-center mb-4">
-                        <h3 class="fw-bold text-primary">學生社團線上報名</h3>
-                        <p class="text-muted">請填寫正確學生資訊，送出後即時完成名額鎖定。</p>
+                
+                <!-- 【第一階段】：完整報名需知與退費規定 -->
+                <div id="noticeSection" class="info-section p-2">
+                    <!-- 重要提醒區塊 -->
+                    <div class="highlight-box">
+                        <strong>⚠️ 重要提醒：</strong> 請務必確認學生年級是否符合社團招收規定，重複報名者將以最後一次提交的時間為準。
+                    </div>
+                    <div class="highlight-box">
+                        <strong>⚠️ 重要公告：</strong> 下學期社團活動為期 <strong>15週 (9月14日起開始)</strong>。<br>
+                        收費暫以 10 人計算，若不足 10 人不開課；超過 10 人將向下調整費用，最終以公告費用為準。若報名人數過多，將進行遴選或抽籤。
+                    </div>
+
+                    <h4>⛔ 注意事項</h4>
+                    <ul>
+                        <li><strong>接送安全：</strong> 請家長務必準時接送孩子回家。如無法配合，為確保學生安全，學校保有學生退社之權利。</li>
+                        <li><strong>續讀評估：</strong> 上學期已報名的學生，社團老師將視學習情況，評估是否適合繼續參加或建議轉報其他社團。</li>
+                        <li><strong>費用優惠：</strong> 具低收入戶證明學生，得享有學費 <strong>5折</strong> 優惠。</li>
+                        <li><strong>審慎報名：</strong> 指導費以人數分攤計算，一旦符合開社條件即視為報名成功。臨時退社將增加學校負擔，請務必審慎考慮。</li>
+                    </ul>
+
+                    <h4>台東縣東海國小社團退費辦法</h4>
+                    <p class="text-muted"><strong>⚠️ 報名即佔用上課名額，於報名時間截止視為報名成功。</strong></p>
+
+                    <h5 class="mt-3 text-dark fw-bold">一、退費標準</h5>
+                    <ul>
+                        <li><strong>全額退費：</strong> 本校因故未能開班上課。</li>
+                        <li><strong>退還 70%：</strong> 完成報名後，於「報名截止至上課前」申請退社者。</li>
+                        <li><strong>退還 50%：</strong> 自實際上課日起，「未逾全期三分之一」者。</li>
+                        <li><strong>不予退費：</strong> 上課已「超過全期三分之一」者。</li>
+                        <li><strong>特殊請假：</strong> 除因公假、喪假而短期無法上課 (依比例退費) 外，其他因素短期請假皆不予退費。</li>
+                    </ul>
+
+                    <h5 class="mt-3 text-dark fw-bold">二、辦理方式</h5>
+                    <ul>
+                        <li>得親自或委託他人辦理 (委託需攜帶委託書)。</li>
+                        <li>請至<strong>學務處</strong>填寫退費申請書乙份。</li>
+                        <li>退費一律採<strong>郵局轉帳</strong>方式，無帳戶者以支票辦理。</li>
+                    </ul>
+
+                    <hr class="my-4">
+
+                    <div class="text-muted small mb-4">
+                        三、本辦法經校務會議通過後，呈 校長核可後施行。
+                    </div>
+
+                    <!-- 勾選閱讀與前往報名按鈕 -->
+                    <div class="card p-3 bg-light border text-center my-3">
+                        <div class="form-check d-inline-block text-start mb-3">
+                            <input class="form-check-input" type="checkbox" id="agreeCheckbox" onchange="toggleAgreeButton()">
+                            <label class="form-check-label fw-bold text-dark fs-6" for="agreeCheckbox" style="cursor: pointer;">
+                                我已詳閱並同意上述社團活動需知與退費辦法規定
+                            </label>
+                        </div>
+                        <div>
+                            <button id="agreeBtn" class="btn btn-primary btn-lg px-5" disabled onclick="unlockAndShowForm()">
+                                我已閱讀，前往報名 &raquo;
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 【第二階段】：自製報名填報表單 (預設隱藏，勾選同意後展開) -->
+                <div id="registrationSection" class="form-section pt-3" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                        <h4 class="fw-bold text-primary mb-0">📝 學生社團線上報名</h4>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="showNoticeAgain()">
+                            ⬆️ 重新查看需知
+                        </button>
                     </div>
 
                     <!-- 報名結果提示訊息 -->
@@ -267,43 +315,52 @@
                                     🔄 刷新
                                 </button>
                             </div>
-                            <div class="form-text text-muted">系統已自動隱藏已額滿社團，若選項無顯示代表已無名額。</div>
+                            <div class="form-text text-muted">系統已自動隱藏額滿社團，若選項無顯示代表已無名額。</div>
                         </div>
 
-                        <!-- 學生年級、班級、座號 -->
+                        <!-- 學生年級、班級、座號 (改為下拉選單) -->
                         <div class="row g-2 mb-3">
+                            <!-- 年級修改：一年、二年、三年、四年、五年、六年 -->
                             <div class="col-4">
                                 <label for="gradeInput" class="form-label">年級<span class="required-star">*</span></label>
-                                <select class="form-select" id="gradeInput" required>
+                                <select class="form-select form-select-lg" id="gradeInput" required>
                                     <option value="" selected disabled>請選擇</option>
-                                    <option value="一年級">一年級</option>
-                                    <option value="二年級">二年級</option>
-                                    <option value="三年級">三年級</option>
-                                    <option value="四年級">四年級</option>
-                                    <option value="五年級">五年級</option>
-                                    <option value="六年級">六年級</option>
+                                    <option value="一年">一年</option>
+                                    <option value="二年">二年</option>
+                                    <option value="三年">三年</option>
+                                    <option value="四年">四年</option>
+                                    <option value="五年">五年</option>
+                                    <option value="六年">六年</option>
                                 </select>
                             </div>
+                            <!-- 班級修改：一班、二班、三班、四班 -->
                             <div class="col-4">
                                 <label for="classInput" class="form-label">班級<span class="required-star">*</span></label>
-                                <input type="text" class="form-control" id="classInput" placeholder="例：1班 或 甲班" required>
+                                <select class="form-select form-select-lg" id="classInput" required>
+                                    <option value="" selected disabled>請選擇</option>
+                                    <option value="一班">一班</option>
+                                    <option value="二班">二班</option>
+                                    <option value="三班">三班</option>
+                                    <option value="四班">四班</option>
+                                </select>
                             </div>
+                            <!-- 座號 -->
                             <div class="col-4">
                                 <label for="seatInput" class="form-label">座號<span class="required-star">*</span></label>
-                                <input type="number" class="form-control" id="seatInput" placeholder="例：05" min="1" max="50" required>
+                                <input type="number" class="form-control form-select-lg" id="seatInput" placeholder="例：05" min="1" max="50" required>
                             </div>
                         </div>
 
                         <!-- 學生姓名 -->
                         <div class="mb-3">
                             <label for="nameInput" class="form-label">學生姓名<span class="required-star">*</span></label>
-                            <input type="text" class="form-control" id="nameInput" placeholder="請輸入學生真實姓名" required>
+                            <input type="text" class="form-control form-control-lg" id="nameInput" placeholder="請輸入學生真實姓名" required>
                         </div>
 
                         <!-- 家長手機 -->
                         <div class="mb-3">
                             <label for="regPhoneInput" class="form-label">家長手機號碼<span class="required-star">*</span></label>
-                            <input type="tel" class="form-control" id="regPhoneInput" placeholder="例如：0912345678 (供查詢與聯絡用)" required>
+                            <input type="tel" class="form-control form-control-lg" id="regPhoneInput" placeholder="例如：0912345678 (供查詢與聯絡用)" required>
                         </div>
 
                         <!-- 電子信箱 (選填) -->
@@ -322,7 +379,9 @@
                 </div>
             </div>
 
-            <!-- 4. 報名查詢 -->
+            <!-- ==========================================
+                 分頁 3：報名查詢
+                 ========================================== -->
             <div class="tab-pane fade" id="query-pane" role="tabpanel">
                 <div class="p-2">
                     <div class="mb-4 text-center">
@@ -361,26 +420,36 @@
     // 🔗 請確認此網址為 Google Apps Script 發布的 Web App 網址
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyop4CtIrPQW2bG3_GX3GeXSCZoyD27vX9Mz7JsAaOe2gv972IZ26Swl6RlPh51x0Hc/exec";
 
-    document.addEventListener("DOMContentLoaded", function () {
-        // 頁面載入時先拉取一次社團選單
-        loadClubOptions();
-
-        // 每次點擊「線上報名」分頁時，自動重新載入最新名額
-        const formTabBtn = document.getElementById("form-tab");
-        if (formTabBtn) {
-            formTabBtn.addEventListener("shown.bs.tab", function () {
-                loadClubOptions();
-            });
-        }
-    });
-
-    function goToFormTab() {
+    // -------------------------------------------------------------
+    // 分頁切換與需知同意控制
+    // -------------------------------------------------------------
+    function switchToFormTab() {
         const formTab = new bootstrap.Tab(document.getElementById('form-tab'));
         formTab.show();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // 格式化/清洗手機號碼
+    // 監聽勾選狀態，解鎖「我已閱讀，前往報名」按鈕
+    function toggleAgreeButton() {
+        const checkbox = document.getElementById("agreeCheckbox");
+        const agreeBtn = document.getElementById("agreeBtn");
+        agreeBtn.disabled = !checkbox.checked;
+    }
+
+    // 點擊「我已閱讀，前往報名」：展開表單並載入最新社團名額
+    function unlockAndShowForm() {
+        const regSection = document.getElementById("registrationSection");
+        regSection.style.display = "block";
+        loadClubOptions();
+        regSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // 重新查看需知
+    function showNoticeAgain() {
+        document.getElementById("noticeSection").scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // 手機號碼格式清洗函式
     function cleanPhoneNumber(phone) {
         if (!phone) return "";
         let str = String(phone).trim();
@@ -444,7 +513,7 @@
         const payload = {
             club: document.getElementById("clubSelect").value,
             grade: document.getElementById("gradeInput").value,
-            class_name: document.getElementById("classInput").value.trim(),
+            class_name: document.getElementById("classInput").value,
             seat_num: document.getElementById("seatInput").value.trim(),
             student_name: document.getElementById("nameInput").value.trim(),
             phone: phone,
@@ -474,7 +543,6 @@
             if (result.status === "success") {
                 showAlert("success", result.message);
                 document.getElementById("signupForm").reset();
-                // 重新載入最新名額
                 loadClubOptions();
             } else if (result.status === "full") {
                 showAlert("warning", result.message);
