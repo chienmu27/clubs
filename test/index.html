@@ -1,675 +1,583 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>點名簿系統</title>
-  <style>
-    :root { 
-      --primary: #1a73e8; --success: #1e8e3e; --warning: #f29900; --danger: #d93025; 
-      --gray: #5f6368; --logout: #607d8b; --admin: #8e24aa; 
-    }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f3f4; padding: 12px; color: #3c4043; }
-    .card { max-width: 550px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-    h2 { text-align: center; color: var(--primary); margin-top: 0; margin-bottom: 15px; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社團報名與查詢系統</title>
 
-    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-    button { padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 15px; }
-    
-    .btn-nav { background: #dadce0; color: #3c4043; width: 100%; }
-    .btn-logout { background: var(--logout); color: white; width: 100%; }
-    .btn-admin { background: var(--admin); color: white; width: 100%; margin-bottom: 12px; }
-    .btn-club { background: #e8f0fe; color: var(--primary); font-size: 16px; margin-bottom: 10px; width: 100%; text-align: center; }
-    .btn-submit { background: var(--success); color: white; width: 100%; font-size: 17px; }
-    .btn-leave { background: var(--warning); color: white; width: 100%; font-size: 17px; }
-    .btn-danger { background: #fce8e6; color: var(--danger); width: 100%; border: 1px solid var(--danger); margin-top: 10px; }
-    .btn-outline-danger { background: white; color: var(--danger); border: 1px solid var(--danger); padding: 4px 8px; font-size: 12px; border-radius: 4px; cursor: pointer; }
-    .btn-primary { background: var(--primary); color: white; width: 100%; margin-top: 8px; }
-    .btn-copy { background: #e8f0fe; color: var(--primary); border: 1px solid var(--primary); font-size: 12px; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+    <!-- 引入 Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    .tabs { display: flex; border-bottom: 2px solid #ddd; margin-bottom: 15px; }
-    .tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; color: var(--gray); font-weight: bold; }
-    .tab.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
-    
-    .section { background: #f8f9fa; padding: 14px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #eee; }
-    
-    #uncheckList, #checkedList { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-    .student-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid #eee; background: white; border-radius: 6px; font-size: 14px; }
-    .stu-info { display: flex; align-items: center; gap: 6px; overflow: hidden; }
-    .stu-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .stu-class { font-size: 11px; color: #1a73e8; background: #e8f0fe; padding: 2px 5px; border-radius: 4px; white-space: nowrap; }
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: "Microsoft JhengHei", "Heiti TC", Arial, sans-serif;
+        }
+        .container {
+            max-width: 900px;
+            margin-top: 30px;
+            padding-bottom: 50px;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: none;
+            overflow: hidden;
+        }
+        .card-header-custom {
+            background-color: #4e73df;
+            color: white;
+            padding: 15px;
+            font-weight: bold;
+            font-size: 1.3rem;
+            text-align: center;
+        }
 
-    .club-item-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: white; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 6px; font-size: 14px; }
+        /* 分頁按鈕樣式 */
+        .nav-tabs .nav-link {
+            color: #495057;
+            font-weight: 600;
+            font-size: 1.1rem;
+            padding: 15px;
+            border: none;
+            background-color: #f1f3f5;
+            transition: all 0.3s;
+        }
+        .nav-tabs .nav-link.active {
+            color: #4e73df;
+            background-color: #fff;
+            border-top: 4px solid #4e73df;
+            border-bottom: none;
+        }
+        .nav-tabs .nav-link:hover {
+            background-color: #e9ecef;
+        }
 
-    input[type="date"], input[type="password"], input[type="text"], textarea { 
-      width: 100%; padding: 10px; margin-top: 6px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; box-sizing: border-box; 
-    }
-    textarea { height: 110px; font-family: monospace; }
-    
-    .hidden { display: none !important; }
-    #status { text-align: center; margin-top: 15px; padding: 10px; border-radius: 6px; font-weight: bold; min-height: 20px; font-size: 14px; }
-    .msg-success { background-color: #e6f4ea; color: var(--success); }
-    .msg-error { background-color: #fce8e6; color: var(--danger); }
-    .msg-loading { color: var(--gray); font-style: italic; }
+        .tab-content {
+            background-color: #fff;
+            padding: 25px;
+            min-height: 450px;
+        }
 
-    /* 密碼彈窗 */
-    .modal-overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.45); display: flex; align-items: center; justify-content: center;
-      z-index: 999; padding: 15px; box-sizing: border-box;
-    }
-    .modal-card {
-      background: white; border-radius: 12px; width: 100%; max-width: 360px; padding: 20px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.18); animation: popIn 0.2s ease-out;
-    }
-    @keyframes popIn {
-      from { transform: scale(0.92); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-  </style>
+        /* 需知頁面的樣式 */
+        .info-section h4 {
+            color: #4e73df;
+            border-left: 5px solid #4e73df;
+            padding-left: 10px;
+            margin-top: 20px;
+            margin-bottom: 15px;
+        }
+        .info-section ul li {
+            margin-bottom: 8px;
+            font-size: 1.05rem;
+            line-height: 1.6;
+        }
+        .highlight-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        /* 自製表單樣式 */
+        .form-section {
+            max-width: 650px;
+            margin: 0 auto;
+        }
+        .form-label {
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 6px;
+        }
+        .required-star {
+            color: #e74a3b;
+            margin-left: 3px;
+        }
+        .btn-submit {
+            background-color: #4e73df;
+            border-color: #4e73df;
+            font-weight: bold;
+            font-size: 1.15rem;
+            padding: 12px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .btn-submit:hover {
+            background-color: #2e59d9;
+            border-color: #2653d4;
+        }
+
+        /* 查詢結果卡片樣式 */
+        .result-card {
+            margin-top: 15px;
+            border-left: 5px solid #1cc88a;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .club-name {
+            color: #4e73df;
+            font-weight: 800;
+            font-size: 1.3rem;
+        }
+
+        /* PDF 樣式 */
+        .pdf-wrapper {
+            width: 100%;
+            height: 1200px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+        }
+        .pdf-wrapper iframe {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+        }
+        .pdf-mobile-only { display: none; }
+        .pdf-desktop-only { display: block; }
+
+        @media (max-width: 768px) {
+            .pdf-mobile-only { display: block; }
+            .pdf-desktop-only { display: none; }
+            .tab-content { padding: 15px; }
+        }
+    </style>
 </head>
+
 <body>
 
-<div class="card">
-  <h2><span class="lbl-sys">社團</span>點名簿</h2>
+<div class="container">
+    <div class="card">
+        <div class="card-header-custom">
+            🏫 社團報名與查詢系統
+        </div>
 
-  <!-- 1. 初次未綁定試算表時的初始化登入視圖 -->
-  <div id="viewInitLogin" class="hidden">
-    <div class="section">
-      <h4 style="margin:0 0 10px 0; text-align:center;">系統初始化綁定試算表</h4>
-      <label><b>請輸入 Google 試算表網址：</b></label>
-      <input type="text" id="initSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/...">
-      
-      <label style="margin-top:10px; display:block;"><b>管理密碼 (預設 1234)：</b></label>
-      <input type="password" id="initAdminPwd" placeholder="請輸入管理密碼">
-      <button class="btn-primary" onclick="initConnectAndLogin()">儲存並永久綁定試算表</button>
+        <!-- 分頁導航 -->
+        <ul class="nav nav-tabs nav-fill" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info-pane" type="button" role="tab">
+                    📢 報名需知
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pdf-tab" data-bs-toggle="tab" data-bs-target="#pdf-pane" type="button" role="tab">
+                    📄 社團項目
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="form-tab" data-bs-toggle="tab" data-bs-target="#form-pane" type="button" role="tab">
+                    📝 線上報名
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="query-tab" data-bs-toggle="tab" data-bs-target="#query-pane" type="button" role="tab">
+                    🔍 報名查詢
+                </button>
+            </li>
+        </ul>
+
+        <!-- 分頁內容 -->
+        <div class="tab-content" id="myTabContent">
+
+            <!-- 1. 報名需知 -->
+            <div class="tab-pane fade show active info-section p-2" id="info-pane" role="tabpanel">
+                <div class="highlight-box">
+                    <strong>⚠️ 重要提醒：</strong> 請務必確認學生年級是否符合社團招收規定，每位學生同一個社團僅能報名一次。
+                </div>
+                <div class="highlight-box">
+                    <strong>⚠️ 重要公告：</strong> 下學期社團活動為期 <strong>15週</strong>。
+                    <br>
+                    收費暫以 10 人計算，若不足 10 人不開課；超過 10 人將向下調整費用。
+                </div>
+
+                <h4>⛔ 注意事項</h4>
+                <ul>
+                    <li><strong>接送安全：</strong> 請家長務必準時接送孩子回家。</li>
+                    <li><strong>費用優惠：</strong> 具低收入戶證明學生，得享有學費 <strong>5折</strong> 優惠。</li>
+                    <li><strong>審慎報名：</strong> 指導費以人數分攤計算，名額有限額滿為止。</li>
+                </ul>
+
+                <hr class="my-4">
+                <div class="text-center mt-4">
+                    <button class="btn btn-primary btn-lg px-4" onclick="goToFormTab()">
+                        我已閱讀，前往報名 &raquo;
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. PDF 招生簡章 -->
+            <div class="tab-pane fade" id="pdf-pane" role="tabpanel">
+                <div class="p-2">
+                    <div class="alert alert-info d-flex align-items-center" role="alert">
+                        <div class="me-2">📄</div>
+                        <div>
+                            若 PDF 無法顯示，請點此
+                            <a href="https://drive.google.com/file/d/1iRE8f2t9WnkBAcm03U3-HMISPUmFic8C/view?usp=drive_link" target="_blank" rel="noopener">
+                                開啟招生簡章
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="pdf-mobile-only text-center">
+                        <a class="btn btn-primary btn-lg w-100"
+                           href="https://drive.google.com/file/d/1iRE8f2t9WnkBAcm03U3-HMISPUmFic8C/view?usp=drive_link"
+                           target="_blank" rel="noopener">
+                            📄 點我開啟招生簡章 PDF
+                        </a>
+                    </div>
+
+                    <div class="pdf-desktop-only pdf-wrapper">
+                        <iframe
+                            src="https://drive.google.com/file/d/1GqJAuw681E547tOfu5upwUwPTfBS6dSB/preview"
+                            title="社團招生簡章 PDF"
+                            allow="autoplay">
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 純自製線上報名表單 (取代 iframe) -->
+            <div class="tab-pane fade" id="form-pane" role="tabpanel">
+                <div class="form-section">
+                    <div class="text-center mb-4">
+                        <h3 class="fw-bold text-primary">學生社團線上報名</h3>
+                        <p class="text-muted">請填寫正確學生資訊，送出後即時完成名額鎖定。</p>
+                    </div>
+
+                    <!-- 報名結果提示訊息 -->
+                    <div id="formAlert" class="alert d-none" role="alert"></div>
+
+                    <form id="signupForm" onsubmit="submitRegistration(event)">
+                        <!-- 社團選擇 (動態載入未額滿選項) -->
+                        <div class="mb-3">
+                            <label for="clubSelect" class="form-label">選擇社團項目<span class="required-star">*</span></label>
+                            <div class="input-group">
+                                <select class="form-select form-select-lg" id="clubSelect" required>
+                                    <option value="" selected disabled>⏳ 社團名額載入中...</option>
+                                </select>
+                                <button class="btn btn-outline-secondary" type="button" onclick="loadClubOptions(true)" title="重新整理名額">
+                                    🔄 刷新
+                                </button>
+                            </div>
+                            <div class="form-text text-muted">系統已自動隱藏已額滿社團，若選項無顯示代表已無名額。</div>
+                        </div>
+
+                        <!-- 學生年級、班級、座號 -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-4">
+                                <label for="gradeInput" class="form-label">年級<span class="required-star">*</span></label>
+                                <select class="form-select" id="gradeInput" required>
+                                    <option value="" selected disabled>請選擇</option>
+                                    <option value="一年級">一年級</option>
+                                    <option value="二年級">二年級</option>
+                                    <option value="三年級">三年級</option>
+                                    <option value="四年級">四年級</option>
+                                    <option value="五年級">五年級</option>
+                                    <option value="六年級">六年級</option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <label for="classInput" class="form-label">班級<span class="required-star">*</span></label>
+                                <input type="text" class="form-control" id="classInput" placeholder="例：1班 或 甲班" required>
+                            </div>
+                            <div class="col-4">
+                                <label for="seatInput" class="form-label">座號<span class="required-star">*</span></label>
+                                <input type="number" class="form-control" id="seatInput" placeholder="例：05" min="1" max="50" required>
+                            </div>
+                        </div>
+
+                        <!-- 學生姓名 -->
+                        <div class="mb-3">
+                            <label for="nameInput" class="form-label">學生姓名<span class="required-star">*</span></label>
+                            <input type="text" class="form-control" id="nameInput" placeholder="請輸入學生真實姓名" required>
+                        </div>
+
+                        <!-- 家長手機 -->
+                        <div class="mb-3">
+                            <label for="regPhoneInput" class="form-label">家長手機號碼<span class="required-star">*</span></label>
+                            <input type="tel" class="form-control" id="regPhoneInput" placeholder="例如：0912345678 (供查詢與聯絡用)" required>
+                        </div>
+
+                        <!-- 電子信箱 (選填) -->
+                        <div class="mb-4">
+                            <label for="emailInput" class="form-label">電子信箱 (選填)</label>
+                            <input type="email" class="form-control" id="emailInput" placeholder="填寫可收到報名成功確認信">
+                        </div>
+
+                        <!-- 送出按鈕 -->
+                        <div class="d-grid mt-4">
+                            <button type="submit" id="submitBtn" class="btn btn-primary btn-submit">
+                                🚀 確認並送出報名
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 4. 報名查詢 -->
+            <div class="tab-pane fade" id="query-pane" role="tabpanel">
+                <div class="p-2">
+                    <div class="mb-4 text-center">
+                        <label for="phoneInput" class="form-label fw-bold fs-5">請輸入家長手機號碼：</label>
+                        <div class="input-group input-group-lg mt-2">
+                            <input type="tel" id="phoneInput" class="form-control" placeholder="例如：0912345678" onkeypress="handleEnter(event)">
+                            <button class="btn btn-primary" type="button" onclick="searchData()">查詢</button>
+                        </div>
+                        <div class="form-text text-muted mt-2">
+                            輸入報名時填寫的手機號碼，查詢有效報名紀錄。
+                        </div>
+                    </div>
+                    <div id="loadingSpinner" class="text-center my-4" style="display: none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-primary">資料查詢中，請稍候...</p>
+                    </div>
+                    <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
+                    <div id="resultArea"></div>
+                </div>
+            </div>
+
+        </div>
     </div>
-  </div>
 
-  <!-- 2. 社團 / 班級清單首頁 -->
-  <div id="viewClubSelect" class="hidden">
-    <button class="btn-admin" onclick="openAdminPanel()">⚙️ 進入後台管理專區 (修改試算表/新增班級/密碼)</button>
-    <p style="text-align:center; font-weight:bold;">請選擇<span class="lbl-sys">社團</span>：</p>
-    <div id="clubBtns">讀取中...</div>
-  </div>
-
-  <!-- 3. 後台管理視圖 -->
-  <div id="viewAdminPanel" class="hidden">
-    <div class="btn-grid">
-      <button class="btn-nav" onclick="closeAdminPanel()">← 回清單</button>
-      <button class="btn-logout" onclick="adminLogout()">登出管理員</button>
+    <div class="text-center mt-4 text-muted" style="font-size: 0.85rem;">
+        &copy; 社團系統 | 東海國小體育組
     </div>
-
-    <!-- 後台管理密碼登入 -->
-    <div id="adminLoginArea" class="section">
-      <label><b>管理員驗證：</b></label>
-      <input type="password" id="adminGlobalPwd" placeholder="請輸入管理密碼 (預設: 1234)">
-      <button class="btn-primary" onclick="verifyAdminGlobal()">登入後台</button>
-    </div>
-
-    <!-- 後台管理功能專區 -->
-    <div id="adminActionArea" class="hidden">
-      
-      <!-- 試算表網址修改與系統設定 -->
-      <div class="section" style="border-left: 4px solid var(--admin);">
-        <label><b>🔗 綁定試算表網址 (伺服器永久保存)：</b></label>
-        <input type="text" id="cfgSheetUrl" placeholder="貼上新的試算表網址">
-        <p style="font-size:12px; color:gray; margin:2px 0 8px 0;">網址已儲存於伺服器，所有人與裝置免設定直接共用，若需更換新表在此貼上儲存即可。</p>
-
-        <label style="margin-top:8px; display:block;"><b>🏷️ 系統名稱 (如: 社團 / 課後班 / 羽球隊)：</b></label>
-        <input type="text" id="cfgSystemName" placeholder="例如：社團">
-        
-        <label style="margin-top:8px; display:block;"><b>🔑 修改管理者密碼 (_AdminAuth 第2列)：</b></label>
-        <input type="password" id="cfgNewPwd" placeholder="若不修改請留空">
-        
-        <button class="btn-primary" onclick="saveSystemConfig()">儲存系統設定</button>
-      </div>
-
-      <!-- 各班專屬免登入網址清單 -->
-      <div class="section" style="border-left: 4px solid var(--primary);">
-        <label><b>🔗 各班專屬直達點名網址：</b></label>
-        <p style="font-size:12px; color:gray; margin:4px 0 8px 0;">傳給老師後直接開啟點名，不顯示任何導覽按鈕，送出時輸入該班密碼：</p>
-        <div id="directLinksList"></div>
-      </div>
-
-      <!-- 新增社團/班級 -->
-      <div class="section">
-        <label><b>➕ 新增<span class="lbl-sys">社團</span>工作表：</b></label>
-        <input type="text" id="newClubName" placeholder="輸入名稱 (如: 空手道 或 直排輪)">
-        
-        <label style="margin-top:10px; display:block;"><b>🔑 設定該班點名密碼：</b></label>
-        <input type="text" id="newClubPwd" placeholder="例如: 115 (若留空預設 1234)">
-        
-        <label style="margin-top:10px; display:block;"><b>匯入學生名單 (A欄姓名, B欄班級)：</b></label>
-        <textarea id="pasteStudents" placeholder="可直接從 Excel/試算表複製貼上：&#10;王維磬&#9;三年二班&#10;張晴嵐&#9;二年三班"></textarea>
-        
-        <button class="btn-primary" style="background:var(--success);" onclick="createNewClub()">建立工作表並產生專屬網址</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 4. 點名操作頁面 -->
-  <div id="viewMain" class="hidden">
-    <!-- 頂部按鈕列：專屬網址模式下整個區塊會被隱藏 -->
-    <div class="btn-grid" id="mainNavGrid">
-      <button id="btnBackToClubs" class="btn-nav" onclick="backToClubs()">← 更換項目</button>
-      <button id="btnAdminInMain" class="btn-admin" style="margin:0; width:100%;" onclick="openAdminPanel()">⚙️ 後台</button>
-    </div>
-    
-    <h3 id="currentClubDisp" style="text-align:center; margin: 5px 0 15px 0;"></h3>
-
-    <div class="tabs">
-      <div id="tab1" class="tab active" onclick="switchTab('take')">點名/請假</div>
-      <div id="tab2" class="tab" onclick="switchTab('query')">已點查詢</div>
-    </div>
-
-    <div class="section">
-      <label><b>上課日期：</b></label>
-      <input type="date" id="targetDate" onchange="refreshLists()">
-    </div>
-
-    <!-- 尚未點名清單 -->
-    <div id="takeAttendanceArea">
-      <div class="section">
-        <label><b>尚未處理學生 (請勾選)：</b></label>
-        <div id="uncheckList"></div>
-      </div>
-      <div class="btn-grid">
-        <button class="btn-submit" onclick="startSubmit('submit')">出席點名</button>
-        <button class="btn-leave" onclick="startSubmit('leave')">學生請假</button>
-      </div>
-    </div>
-
-    <!-- 已點查詢清單 -->
-    <div id="queryAttendanceArea" class="hidden">
-      <div class="section">
-        <label><b>名單確認 (*為請假)：</b></label>
-        <div id="checkedList"></div>
-        <button id="delAllBtn" class="btn-danger" onclick="confirmDeleteAll()">刪除此日期整欄紀錄</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="status"></div>
 </div>
 
-<!-- 5. 密碼輸入彈窗 (老師點名送出時跳出) -->
-<div id="pwdModal" class="modal-overlay hidden">
-  <div class="modal-card">
-    <h3 id="pwdModalTitle" style="margin-top:0; color:var(--primary); text-align:center;">點名密碼驗證</h3>
-    <p id="pwdModalDesc" style="font-size:13px; color:gray; text-align:center; margin-bottom:12px;">請輸入該項目點名密碼以完成送出</p>
-    <input type="password" id="inputModalPwd" placeholder="請輸入密碼" onkeydown="if(event.key==='Enter') confirmPwdModal();">
-    <div class="btn-grid" style="margin-top:12px; margin-bottom:0;">
-      <button class="btn-nav" onclick="closePwdModal()">取消</button>
-      <button class="btn-submit" style="font-size:15px; padding:10px;" onclick="confirmPwdModal()">確認送出</button>
-    </div>
-  </div>
-</div>
+<!-- 引入 Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-  // ⚠️ 您的獨立 GAS 部署 Web App URL
-  const API_URL = "https://script.google.com/macros/s/AKfycbztNs0CYVeoaAroPfHUuFECI89rXyx3n01CbhGz7gpaKPtakWtzdPgFZ8UVlZDOutGC/exec";
-  
-  let currentSheetUrl = "";
-  let currentClub = "";
-  let currentMode = "take";
-  let systemName = "社團";
-  let isDedicatedMode = false;
-  let pendingActionData = null;
+    // 🔗 請確認此網址為 Google Apps Script 發布的 Web App 網址
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyop4CtIrPQW2bG3_GX3GeXSCZoyD27vX9Mz7JsAaOe2gv972IZ26Swl6RlPh51x0Hc/exec";
 
-  window.onload = async () => {
-    document.getElementById('targetDate').value = new Date().toISOString().split('T')[0];
-    
-    const urlParams = new URLSearchParams(window.location.search);
-    const sheetFromUrl = urlParams.get('sheet') || "";
-    const clubFromUrl = urlParams.get('club') || "";
+    document.addEventListener("DOMContentLoaded", function () {
+        // 頁面載入時先拉取一次社團選單
+        loadClubOptions();
 
-    showStatus("正在連線系統...", "loading");
-
-    try {
-      // 向後端請求系統連線資訊 (自動從伺服器端讀取已儲存的試算表網址)
-      const res = await fetch(`${API_URL}?action=getSystemConfig&sheetUrl=${encodeURIComponent(sheetFromUrl)}`).then(r => r.json());
-
-      if (res.status === "need_init") {
-        clearStatus();
-        hideAllViews();
-        document.getElementById('viewInitLogin').classList.remove('hidden');
-      } else if (res.status === "success") {
-        currentSheetUrl = res.sheetUrl;
-        if (res.systemName) applySystemName(res.systemName);
-        clearStatus();
-
-        if (clubFromUrl) {
-          // 專屬模式：直達指定社團
-          isDedicatedMode = true;
-          currentClub = decodeURIComponent(clubFromUrl);
-          openMainClub(currentClub);
-        } else {
-          isDedicatedMode = false;
-          loadSystemAndClubs();
+        // 每次點擊「線上報名」分頁時，自動重新載入最新名額
+        const formTabBtn = document.getElementById("form-tab");
+        if (formTabBtn) {
+            formTabBtn.addEventListener("shown.bs.tab", function () {
+                loadClubOptions();
+            });
         }
-      } else {
-        showStatus("連線異常：" + res.message, "error");
-      }
-    } catch(e) {
-      showStatus("無法連接後端，請確認 GAS 部署網址是否正確", "error");
-    }
-  };
-
-  function applySystemName(name) {
-    if (!name) return;
-    systemName = name;
-    document.querySelectorAll('.lbl-sys').forEach(el => el.innerText = name);
-  }
-
-  // 讀取社團清單
-  async function loadSystemAndClubs() {
-    showStatus("讀取清單中...", "loading");
-    try {
-      const res = await fetch(`${API_URL}?action=getClubList&sheetUrl=${encodeURIComponent(currentSheetUrl)}`).then(r => r.json());
-      if (res.status === "success") {
-        currentSheetUrl = res.sheetUrl;
-        if (res.systemName) applySystemName(res.systemName);
-        clearStatus();
-        showClubSelection(res.clubs);
-      } else {
-        showStatus("讀取失敗：" + res.message, "error");
-      }
-    } catch(e) { showStatus("讀取失敗", "error"); }
-  }
-
-  // 初次初始化綁定 (寫入伺服器端永久保存)
-  async function initConnectAndLogin() {
-    const url = document.getElementById('initSheetUrl').value.trim();
-    const pwd = document.getElementById('initAdminPwd').value.trim();
-    if (!url || !pwd) return showStatus("請輸入網址與管理密碼", "error");
-
-    showStatus("正在綁定並永久儲存試算表...", "loading");
-    try {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'initSetup',
-          sheetUrl: url,
-          password: pwd
-        })
-      }).then(r => r.json());
-
-      if (res.status === "success") {
-        currentSheetUrl = url;
-        localStorage.setItem("club_admin_logged", "true");
-        localStorage.setItem("club_admin_pwd", pwd);
-        showStatus("綁定成功！", "success");
-        setTimeout(() => { clearStatus(); loadSystemAndClubs(); }, 1000);
-      } else {
-        showStatus(res.message || "綁定失敗！", "error");
-      }
-    } catch(e) { showStatus("綁定失敗", "error"); }
-  }
-
-  function showClubSelection(clubs) {
-    hideAllViews();
-    document.getElementById('viewClubSelect').classList.remove('hidden');
-    const div = document.getElementById('clubBtns');
-    div.innerHTML = "";
-
-    if (clubs && clubs.length > 0) {
-      clubs.forEach(c => {
-        let b = document.createElement('button');
-        b.className = "btn-club";
-        b.innerText = c;
-        b.onclick = () => openMainClub(c);
-        div.appendChild(b);
-      });
-    } else {
-      div.innerHTML = `<p style='text-align:center; color:gray;'>目前尚無${systemName}項目，請點擊上方進入後台建立。</p>`;
-    }
-  }
-
-  function openMainClub(clubName) {
-    currentClub = clubName;
-    hideAllViews();
-    document.getElementById('viewMain').classList.remove('hidden');
-    document.getElementById('currentClubDisp').innerText = `${systemName}：` + currentClub;
-
-    const navGrid = document.getElementById('mainNavGrid');
-    if (isDedicatedMode) {
-      // 專屬直達模式：隱藏頂部導覽列
-      navGrid.classList.add('hidden');
-    } else {
-      navGrid.classList.remove('hidden');
-      document.getElementById('btnAdminInMain').classList.remove('hidden');
-      navGrid.style.gridTemplateColumns = "1fr 1fr";
-      document.getElementById('btnBackToClubs').innerText = `← 更換${systemName}`;
-    }
-
-    refreshLists();
-  }
-
-  function backToClubs() {
-    loadSystemAndClubs();
-  }
-
-  // 刷新點名名單
-  async function refreshLists() {
-    const date = document.getElementById('targetDate').value;
-    if (!currentClub || !date) return;
-    document.getElementById('uncheckList').innerHTML = "<p style='grid-column:span 2;text-align:center;'>載入中...</p>";
-    document.getElementById('checkedList').innerHTML = "<p style='grid-column:span 2;text-align:center;'>載入中...</p>";
-
-    try {
-      const [r1, r2] = await Promise.all([
-        fetch(`${API_URL}?action=getStudents&sheetUrl=${encodeURIComponent(currentSheetUrl)}&clubName=${encodeURIComponent(currentClub)}&date=${date}&mode=unchecked`).then(r => r.json()),
-        fetch(`${API_URL}?action=getStudents&sheetUrl=${encodeURIComponent(currentSheetUrl)}&clubName=${encodeURIComponent(currentClub)}&date=${date}&mode=checked`).then(r => r.json())
-      ]);
-      if (r1.systemName) applySystemName(r1.systemName);
-      renderList('uncheckList', r1.data, 'checkbox');
-      renderList('checkedList', r2.data, 'delete');
-    } catch(e) { showStatus("讀取失敗", "error"); }
-  }
-
-  function renderList(id, data, type) {
-    const container = document.getElementById(id);
-    if (!data || !data.length) {
-      container.innerHTML = "<p style='grid-column:span 2;color:gray;text-align:center;font-size:14px;'>目前無資料</p>";
-      return;
-    }
-    container.innerHTML = "";
-    data.forEach(item => {
-      let d = document.createElement('div');
-      d.className = "student-row";
-      const classTag = item.className ? `<span class="stu-class">${item.className}</span>` : '';
-
-      if (type === 'checkbox') {
-        d.innerHTML = `
-          <div class="stu-info"><span class="stu-name">${item.name}</span>${classTag}</div>
-          <input type="checkbox" name="stu" value="${item.name}" style="transform:scale(1.25); cursor:pointer;">
-        `;
-      } else {
-        const displayName = item.isLeave ? `${item.name}*` : item.name;
-        d.innerHTML = `
-          <div class="stu-info"><span class="stu-name">${displayName}</span>${classTag}</div>
-          <button class="btn-outline-danger" onclick="startDeleteSingle('${item.name}')">刪除</button>
-        `;
-      }
-      container.appendChild(d);
-    });
-  }
-
-  // 1. 點擊送出點名
-  function startSubmit(act) {
-    const box = document.querySelectorAll('input[name="stu"]:checked');
-    if (!box.length) return showStatus("請先勾選學生！", "error");
-    
-    pendingActionData = {
-      action: act,
-      students: Array.from(box).map(b => b.value)
-    };
-    openPwdModal();
-  }
-
-  function startDeleteSingle(name) {
-    if (!confirm(`確定刪除 ${name} 的點名紀錄？`)) return;
-    pendingActionData = {
-      action: 'deleteSingle',
-      studentName: name
-    };
-    openPwdModal();
-  }
-
-  function confirmDeleteAll() {
-    if (!confirm("警告：確定要刪除此日期整欄紀錄？此操作不可還原。")) return;
-    pendingActionData = { action: 'deleteAll' };
-    openPwdModal();
-  }
-
-  // 2. 密碼彈窗
-  function openPwdModal() {
-    document.getElementById('pwdModalTitle').innerText = `【${currentClub}】點名驗證`;
-    document.getElementById('pwdModalDesc').innerText = `請輸入【${currentClub}】點名密碼以送出紀錄：`;
-    document.getElementById('inputModalPwd').value = "";
-    document.getElementById('pwdModal').classList.remove('hidden');
-    setTimeout(() => document.getElementById('inputModalPwd').focus(), 150);
-  }
-
-  function closePwdModal() {
-    document.getElementById('pwdModal').classList.add('hidden');
-    pendingActionData = null;
-  }
-
-  function confirmPwdModal() {
-    const pwd = document.getElementById('inputModalPwd').value.trim();
-    if (!pwd) return alert("請輸入密碼！");
-    
-    document.getElementById('pwdModal').classList.add('hidden');
-    executePost(pwd);
-  }
-
-  // 3. 發送請求寫入試算表
-  async function executePost(pwd) {
-    if (!pendingActionData) return;
-
-    const payload = {
-      ...pendingActionData,
-      sheetUrl: currentSheetUrl,
-      clubName: currentClub,
-      password: pwd,
-      date: document.getElementById('targetDate').value
-    };
-
-    pendingActionData = null;
-
-    showStatus("正在驗證密碼並寫入試算表...", "loading");
-    try {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      }).then(r => r.json());
-
-      if (res.status === 'success') {
-        showStatus(res.message, "success");
-        setTimeout(() => { clearStatus(); refreshLists(); }, 1000);
-      } else {
-        showStatus(res.message || "密碼錯誤，寫入失敗", "error");
-        pendingActionData = { action: payload.action, students: payload.students, studentName: payload.studentName };
-        setTimeout(openPwdModal, 1500);
-      }
-    } catch(e) { 
-      showStatus("送出失敗，請檢查網路或試算表權限", "error"); 
-    }
-  }
-
-  // 後台專區
-  function openAdminPanel() {
-    hideAllViews();
-    document.getElementById('viewAdminPanel').classList.remove('hidden');
-    const isLogged = localStorage.getItem("club_admin_logged") === "true";
-    if (isLogged) {
-      setupAdminActionArea();
-    } else {
-      document.getElementById('adminLoginArea').classList.remove('hidden');
-      document.getElementById('adminActionArea').classList.add('hidden');
-    }
-  }
-
-  async function verifyAdminGlobal() {
-    const pwd = document.getElementById('adminGlobalPwd').value.trim();
-    if (!pwd) return showStatus("請輸入管理者密碼", "error");
-
-    showStatus("驗證中...", "loading");
-    try {
-      const res = await fetch(`${API_URL}?action=verifyPassword&sheetUrl=${encodeURIComponent(currentSheetUrl)}&password=${encodeURIComponent(pwd)}`).then(r => r.json());
-      if (res.success) {
-        localStorage.setItem("club_admin_logged", "true");
-        localStorage.setItem("club_admin_pwd", pwd);
-        showStatus("登入成功！", "success");
-        setTimeout(clearStatus, 1000);
-        setupAdminActionArea();
-      } else {
-        showStatus("管理者密碼錯誤！", "error");
-      }
-    } catch(e) { showStatus("驗證失敗", "error"); }
-  }
-
-  async function setupAdminActionArea() {
-    document.getElementById('adminLoginArea').classList.add('hidden');
-    document.getElementById('adminActionArea').classList.remove('hidden');
-    document.getElementById('cfgSystemName').value = systemName;
-    document.getElementById('cfgSheetUrl').value = currentSheetUrl;
-
-    const res = await fetch(`${API_URL}?action=getClubList&sheetUrl=${encodeURIComponent(currentSheetUrl)}`).then(r => r.json());
-    const listDiv = document.getElementById('directLinksList');
-    listDiv.innerHTML = "";
-
-    const baseUrl = `${window.location.origin}${window.location.pathname}`;
-    if (res.clubs && res.clubs.length > 0) {
-      res.clubs.forEach(c => {
-        const directUrl = `${baseUrl}?club=${encodeURIComponent(c)}`;
-        const row = document.createElement('div');
-        row.className = "club-item-row";
-        row.innerHTML = `
-          <span><b>${c}</b> (密碼: ${res.clubPasswords[c] || '無/預設'})</span>
-          <button class="btn-copy" onclick="copyText('${directUrl}', '${c} 專屬網址')">📋 複製專屬網址</button>
-        `;
-        listDiv.appendChild(row);
-      });
-    } else {
-      listDiv.innerHTML = "<p style='color:gray; font-size:13px;'>目前尚無工作表</p>";
-    }
-  }
-
-  function closeAdminPanel() {
-    if (currentClub) {
-      openMainClub(currentClub);
-    } else {
-      loadSystemAndClubs();
-    }
-  }
-
-  // 登出只清除本機的管理員登入身分，不會刪除伺服器儲存的試算表網址
-  function adminLogout() {
-    localStorage.removeItem("club_admin_logged");
-    localStorage.removeItem("club_admin_pwd");
-    sessionStorage.clear();
-    location.reload();
-  }
-
-  // 後台儲存系統設定 (包含修改試算表網址)
-  async function saveSystemConfig() {
-    const newSheet = document.getElementById('cfgSheetUrl').value.trim();
-    const newName = document.getElementById('cfgSystemName').value.trim();
-    const newPwd = document.getElementById('cfgNewPwd').value.trim();
-    const adminPwd = localStorage.getItem("club_admin_pwd");
-
-    if (!newSheet) return showStatus("試算表網址不能為空", "error");
-
-    showStatus("正在儲存並同步伺服器設定...", "loading");
-    try {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'updateConfig',
-          sheetUrl: currentSheetUrl,
-          newSheetUrl: newSheet,
-          password: adminPwd,
-          newSystemName: newName,
-          newPassword: newPwd
-        })
-      }).then(r => r.json());
-
-      if (res.status === "success") {
-        currentSheetUrl = newSheet;
-        applySystemName(newName);
-        if (newPwd) localStorage.setItem("club_admin_pwd", newPwd);
-        showStatus("設定已成功永久儲存！", "success");
-        setTimeout(() => { clearStatus(); setupAdminActionArea(); }, 1500);
-      } else {
-        showStatus("儲存失敗：" + res.message, "error");
-      }
-    } catch(e) { showStatus("儲存失敗", "error"); }
-  }
-
-  async function createNewClub() {
-    const name = document.getElementById('newClubName').value.trim();
-    const pwd = document.getElementById('newClubPwd').value.trim();
-    const rawData = document.getElementById('pasteStudents').value.trim();
-    const adminPwd = localStorage.getItem("club_admin_pwd");
-
-    if (!name) return showStatus("請輸入名稱", "error");
-
-    const lines = rawData.split('\n');
-    const students = [];
-    lines.forEach(line => {
-      let trimmed = line.trim();
-      if (!trimmed) return;
-      let parts = trimmed.split(/[\t,]/);
-      if (parts.length === 1) parts = trimmed.split(/\s+/);
-      students.push({
-        name: parts[0] ? parts[0].trim() : "",
-        className: parts[1] ? parts[1].trim() : ""
-      });
     });
 
-    showStatus("正在建立工作表...", "loading");
-    try {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'createClub',
-          sheetUrl: currentSheetUrl,
-          password: adminPwd,
-          newClubName: name,
-          clubPassword: pwd || "1234",
-          students: students
-        })
-      }).then(r => r.json());
+    function goToFormTab() {
+        const formTab = new bootstrap.Tab(document.getElementById('form-tab'));
+        formTab.show();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
-      if (res.status === "success") {
-        showStatus(res.message, "success");
-        document.getElementById('newClubName').value = "";
-        document.getElementById('newClubPwd').value = "";
-        document.getElementById('pasteStudents').value = "";
-        setupAdminActionArea();
-      } else {
-        showStatus("建立失敗：" + res.message, "error");
-      }
-    } catch(e) { showStatus("建立失敗", "error"); }
-  }
+    // 格式化/清洗手機號碼
+    function cleanPhoneNumber(phone) {
+        if (!phone) return "";
+        let str = String(phone).trim();
+        str = str.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+        str = str.replace(/[\s\-\(\)\+]/g, "");
+        if (str.startsWith("8869")) str = "0" + str.substring(3);
+        return str;
+    }
 
-  function copyText(text, label) {
-    navigator.clipboard.writeText(text).then(() => {
-      showStatus(`【${label}】已成功複製到剪貼簿！`, "success");
-      setTimeout(clearStatus, 2500);
-    });
-  }
+    // ==========================================================
+    // 1. 動態載入未額滿社團選項 (GET)
+    // ==========================================================
+    async function loadClubOptions(showToast = false) {
+        const select = document.getElementById("clubSelect");
+        if (!select) return;
 
-  function switchTab(m) {
-    currentMode = m;
-    document.getElementById('tab1').className = m === 'take' ? 'tab active' : 'tab';
-    document.getElementById('tab2').className = m === 'query' ? 'tab active' : 'tab';
-    document.getElementById('takeAttendanceArea').className = m === 'take' ? '' : 'hidden';
-    document.getElementById('queryAttendanceArea').className = m === 'query' ? '' : 'hidden';
-    clearStatus(); refreshLists();
-  }
+        try {
+            const res = await fetch(`${SCRIPT_URL}?action=getClubs&_t=${Date.now()}`, { cache: "no-store" });
+            const json = await res.json();
 
-  function hideAllViews() {
-    ['viewInitLogin', 'viewClubSelect', 'viewAdminPanel', 'viewMain'].forEach(id => {
-      document.getElementById(id).classList.add('hidden');
-    });
-  }
+            if (json.status === "success" && json.data) {
+                const clubs = json.data;
+                select.innerHTML = "";
 
-  function showStatus(msg, type) {
-    const s = document.getElementById('status');
-    s.innerText = msg; s.className = "";
-    if (type === "success") s.classList.add('msg-success');
-    else if (type === "error") s.classList.add('msg-error');
-    else s.classList.add('msg-loading');
-  }
+                if (clubs.length === 0) {
+                    select.innerHTML = `<option value="" disabled selected>⚠️ 所有社團名額皆已額滿，報名已截止</option>`;
+                } else {
+                    select.innerHTML = `<option value="" disabled selected>-- 請選擇報名社團 (共 ${clubs.length} 個社團開放中) --</option>`;
+                    clubs.forEach(c => {
+                        const opt = document.createElement("option");
+                        opt.value = c.displayText;
+                        opt.textContent = `${c.displayText} (剩餘名額: ${c.remaining}人)`;
+                        select.appendChild(opt);
+                    });
+                }
+                if (showToast) alert("✅ 社團名額已更新！");
+            }
+        } catch (err) {
+            select.innerHTML = `<option value="" disabled selected>❌ 載入失敗，請點右側「刷新」重試</option>`;
+        }
+    }
 
-  function clearStatus() {
-    const s = document.getElementById('status');
-    if (s) { s.innerText = ""; s.className = ""; }
-  }
+    // ==========================================================
+    // 2. 表單送出 (POST 搶名額鎖定)
+    // ==========================================================
+    async function submitRegistration(e) {
+        e.preventDefault();
+
+        const submitBtn = document.getElementById("submitBtn");
+        const formAlert = document.getElementById("formAlert");
+        formAlert.className = "alert d-none";
+
+        const rawPhone = document.getElementById("regPhoneInput").value;
+        const phone = cleanPhoneNumber(rawPhone);
+
+        if (!phone || phone.length < 9) {
+            showAlert("danger", "⚠️ 請輸入正確有效的手機號碼！");
+            return;
+        }
+
+        const payload = {
+            club: document.getElementById("clubSelect").value,
+            grade: document.getElementById("gradeInput").value,
+            class_name: document.getElementById("classInput").value.trim(),
+            seat_num: document.getElementById("seatInput").value.trim(),
+            student_name: document.getElementById("nameInput").value.trim(),
+            phone: phone,
+            email: document.getElementById("emailInput").value.trim()
+        };
+
+        if (!payload.club) {
+            showAlert("danger", "⚠️ 請選擇要報名的社團！");
+            return;
+        }
+
+        // 鎖定送出按鈕防止重複點擊
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `⏳ 系統搶名額鎖定中，請稍候...`;
+
+        try {
+            const response = await fetch(SCRIPT_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `🚀 確認並送出報名`;
+
+            if (result.status === "success") {
+                showAlert("success", result.message);
+                document.getElementById("signupForm").reset();
+                // 重新載入最新名額
+                loadClubOptions();
+            } else if (result.status === "full") {
+                showAlert("warning", result.message);
+                loadClubOptions(); // 立即將額滿社團剔除
+            } else if (result.status === "duplicate") {
+                showAlert("danger", result.message);
+            } else {
+                showAlert("danger", "❌ 報名未成功：" + result.message);
+            }
+
+        } catch (error) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `🚀 確認並送出報名`;
+            showAlert("danger", "📡 網路傳輸異常或系統忙碌，請稍候重試。");
+        }
+    }
+
+    function showAlert(type, msg) {
+        const formAlert = document.getElementById("formAlert");
+        formAlert.className = `alert alert-${type} shadow-sm`;
+        formAlert.innerHTML = msg;
+        formAlert.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    // ==========================================================
+    // 3. 手機查詢功能
+    // ==========================================================
+    function handleEnter(event) { if (event.key === "Enter") searchData(); }
+
+    async function searchData() {
+        const rawInput = document.getElementById('phoneInput').value;
+        const phoneInput = cleanPhoneNumber(rawInput);
+        const resultArea = document.getElementById('resultArea');
+        const spinner = document.getElementById('loadingSpinner');
+        const errorMsg = document.getElementById('errorMessage');
+        
+        resultArea.innerHTML = "";
+        errorMsg.classList.add('d-none');
+
+        if (!phoneInput || phoneInput.length < 8) { 
+            showError("⚠️ 請輸入正確的手機號碼！"); 
+            return; 
+        }
+
+        spinner.style.display = 'block';
+        try {
+            const requestUrl = `${SCRIPT_URL}?phone=${encodeURIComponent(phoneInput)}&_t=${Date.now()}`;
+            const response = await fetch(requestUrl, { cache: "no-store" });
+            const json = await response.json();
+            spinner.style.display = 'none';
+
+            if (json.status === 'success') {
+                if (json.data && json.data.length > 0) {
+                    renderResults(json.data);
+                } else {
+                    resultArea.innerHTML = `
+                        <div class="alert alert-warning text-center">
+                            <h5>查無報名資料</h5>
+                            <p class="mb-1">找不到手機號碼 <strong>${rawInput.trim()}</strong> 的有效報名紀錄。</p>
+                        </div>`;
+                }
+            } else { 
+                showError("❌ 查詢失敗：" + (json.message || "發生未知錯誤")); 
+            }
+        } catch (error) {
+            spinner.style.display = 'none';
+            showError("📡 連線發生錯誤，請檢查網路連線。");
+        }
+    }
+
+    function renderResults(data) {
+        const resultArea = document.getElementById('resultArea');
+        let html = `<h5 class="mb-3 ps-2 border-start border-4 border-primary">查詢結果：共 ${data.length} 筆有效報名</h5>`;
+        data.forEach((item) => {
+            html += `
+                <div class="card result-card">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h4 class="card-title club-name mb-2">${item.club}</h4>
+                                <div class="text-secondary" style="font-size: 1.05rem;">
+                                    <span class="badge bg-secondary me-2">學生</span><strong>${item.student_name}</strong>
+                                    <span class="ms-2 badge bg-light text-dark border">
+                                        ${item.grade} ${item.class_name} (${item.seat_num}號)
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                                <small class="text-muted d-block">報名時間</small>
+                                <span class="fw-bold text-dark">${item.timestamp}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        resultArea.innerHTML = html;
+    }
+
+    function showError(msg) {
+        const errorMsg = document.getElementById('errorMessage');
+        errorMsg.innerHTML = msg;
+        errorMsg.classList.remove('d-none');
+    }
 </script>
 
 </body>
