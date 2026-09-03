@@ -321,16 +321,14 @@
                     </div>
                 </div>
 
-                <!-- 【階段 3】：自製報名填報表單 (含紅字動態 3 分鐘倒數計時) -->
+                <!-- 【階段 3】：自製報名填報表單 (帶有 3 分鐘動態倒數計時) -->
                 <div id="registrationSection" class="form-section pt-2" style="display: none;">
                     <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
                         <div>
                             <h4 class="fw-bold text-primary mb-0">📝 學生社團線上報名</h4>
-                            <div class="d-flex flex-wrap align-items-center mt-1">
-                                <small class="text-success fw-bold">🟢 已進入獨立填表名額 (號碼牌 <span id="activeTicketBadge">#</span>)</small>
-                                <!-- 👇 紅字說明與動態倒數計時器 -->
-                                <span class="text-danger fw-bold ms-2">（⚠️ 請於規定時間 <span id="countdownTimer" class="badge bg-danger fs-6">03:00</span> 內完成）</span>
-                            </div>
+                            <small class="text-success fw-bold">🟢 已進入獨立填表名額 (號碼牌 <span id="activeTicketBadge">#</span>)</small>
+                            <!-- 👇 動態 3 分鐘倒數計時紅字標籤 -->
+                            <span class="text-danger fw-bold ms-2">（⚠️ 請於規定時間 <span id="countdownTimer">03:00</span> 內完成）</span>
                         </div>
                         <button class="btn btn-sm btn-outline-secondary" type="button" onclick="showNoticeAgain()">
                             ⬆️ 重新查看需知
@@ -455,7 +453,7 @@
 
     let currentMyTicket = sessionStorage.getItem("MY_QUEUE_TICKET") || null;
     let queuePollingTimer = null;
-    let countdownInterval = null; // 倒數計時器變數
+    let countdownInterval = null; // 倒數計時器計數物件
 
     function switchToFormTab() {
         const formTab = new bootstrap.Tab(document.getElementById('form-tab'));
@@ -544,34 +542,31 @@
         startCountdown(180);
     }
 
-    // 動態倒數計時器邏輯
-    function startCountdown(durationSeconds) {
+    // 動態倒數計時函式
+    function startCountdown(seconds) {
         if (countdownInterval) clearInterval(countdownInterval);
-        let timeLeft = durationSeconds;
+        let timeLeft = seconds;
         const timerDisplay = document.getElementById("countdownTimer");
 
-        function updateTimer() {
-            const mins = Math.floor(timeLeft / 60);
-            const secs = timeLeft % 60;
+        countdownInterval = setInterval(() => {
+            let mins = Math.floor(timeLeft / 60);
+            let secs = timeLeft % 60;
             if (timerDisplay) {
-                timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                timerDisplay.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             }
 
             if (timeLeft <= 0) {
                 clearInterval(countdownInterval);
-                alert("⏰ 填表時間已超過 3 分鐘，為確保排隊公平性，系統即將重新載入！");
+                alert("⏰ 填表時間已超過 3 分鐘，為確保名額順暢，系統即將重新載入！");
                 sessionStorage.removeItem("MY_QUEUE_TICKET");
                 location.reload();
             }
             timeLeft--;
-        }
-
-        updateTimer();
-        countdownInterval = setInterval(updateTimer, 1000);
+        }, 1000);
     }
 
     function showNoticeAgain() {
-        if (countdownInterval) clearInterval(countdownInterval); // 暫停倒數
+        if (countdownInterval) clearInterval(countdownInterval);
         document.getElementById("registrationSection").style.display = "none";
         document.getElementById("queueSection").style.display = "none";
         document.getElementById("noticeSection").style.display = "block";
@@ -581,7 +576,6 @@
     function cleanPhoneNumber(phone) {
         if (!phone) return "";
         let str = String(phone).trim();
-        str = str.replace(/[０-奪]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
         str = str.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
         str = str.replace(/[\s\-\(\)\+]/g, "");
         if (str.startsWith("8869")) str = "0" + str.substring(3);
@@ -670,8 +664,7 @@
             submitBtn.innerHTML = `🚀 確認並送出報名`;
 
             if (result.status === "success") {
-                // 成功送出：停止倒數計時器
-                if (countdownInterval) clearInterval(countdownInterval);
+                if (countdownInterval) clearInterval(countdownInterval); // 成功送出後停止計時
                 showAlert("success", result.message);
                 document.getElementById("signupForm").reset();
                 sessionStorage.removeItem("MY_QUEUE_TICKET");
