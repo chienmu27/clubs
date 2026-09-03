@@ -317,17 +317,20 @@
 
                     <div class="alert alert-warning small text-start mb-0">
                         ⏳ <strong>請保持此畫面開啟，請勿關閉網頁！</strong><br>
-                        輪到您的號碼時，系統會自動切換至填報頁面。<br>
-                        已進入填表名額，請於規定時間3分鐘內完成。
+                        輪到您的號碼時，系統會自動切換至填報頁面。
                     </div>
                 </div>
 
-                <!-- 【階段 3】：自製報名填報表單 -->
+                <!-- 【階段 3】：自製報名填報表單 (含紅字動態 3 分鐘倒數計時) -->
                 <div id="registrationSection" class="form-section pt-2" style="display: none;">
                     <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
                         <div>
                             <h4 class="fw-bold text-primary mb-0">📝 學生社團線上報名</h4>
-                            <small class="text-success fw-bold">🟢 已進入獨立填表名額 (號碼牌 <span id="activeTicketBadge">#</span>)</small>
+                            <div class="d-flex flex-wrap align-items-center mt-1">
+                                <small class="text-success fw-bold">🟢 已進入獨立填表名額 (號碼牌 <span id="activeTicketBadge">#</span>)</small>
+                                <!-- 👇 紅字說明與動態倒數計時器 -->
+                                <span class="text-danger fw-bold ms-2">（⚠️ 請於規定時間 <span id="countdownTimer" class="badge bg-danger fs-6">03:00</span> 內完成）</span>
+                            </div>
                         </div>
                         <button class="btn btn-sm btn-outline-secondary" type="button" onclick="showNoticeAgain()">
                             ⬆️ 重新查看需知
@@ -452,6 +455,7 @@
 
     let currentMyTicket = sessionStorage.getItem("MY_QUEUE_TICKET") || null;
     let queuePollingTimer = null;
+    let countdownInterval = null; // 倒數計時器變數
 
     function switchToFormTab() {
         const formTab = new bootstrap.Tab(document.getElementById('form-tab'));
@@ -469,12 +473,10 @@
     // 1. 排隊取號與狀態輪詢邏輯
     // ==========================================================
     async function requestQueueEntry() {
-        // 隱藏需知，顯示排隊等候室
         document.getElementById("noticeSection").style.display = "none";
         document.getElementById("queueSection").style.display = "block";
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // 若已有號碼牌則直接檢查，沒有則向後端領取
         if (!currentMyTicket) {
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=getTicket&_t=${Date.now()}`);
@@ -499,7 +501,6 @@
         }
     }
 
-    // 輪詢檢查排隊進度 (每 2.5 秒)
     function startQueuePolling() {
         if (queuePollingTimer) clearInterval(queuePollingTimer);
         queuePollingTimer = setInterval(checkCurrentQueueStatus, 2500);
@@ -531,16 +532,46 @@
         }
     }
 
-    // 正式解鎖並進入填寫表單
+    // 正式解鎖並進入填寫表單 (啟動 3 分鐘倒數)
     function enterRegistrationForm() {
         document.getElementById("queueSection").style.display = "none";
         document.getElementById("registrationSection").style.display = "block";
         document.getElementById("activeTicketBadge").innerText = `#${currentMyTicket}`;
         loadClubOptions();
         window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // 啟動 3 分鐘 (180 秒) 動態倒數計時
+        startCountdown(180);
+    }
+
+    // 動態倒數計時器邏輯
+    function startCountdown(durationSeconds) {
+        if (countdownInterval) clearInterval(countdownInterval);
+        let timeLeft = durationSeconds;
+        const timerDisplay = document.getElementById("countdownTimer");
+
+        function updateTimer() {
+            const mins = Math.floor(timeLeft / 60);
+            const secs = timeLeft % 60;
+            if (timerDisplay) {
+                timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            }
+
+            if (timeLeft <= 0) {
+                clearInterval(countdownInterval);
+                alert("⏰ 填表時間已超過 3 分鐘，為確保排隊公平性，系統即將重新載入！");
+                sessionStorage.removeItem("MY_QUEUE_TICKET");
+                location.reload();
+            }
+            timeLeft--;
+        }
+
+        updateTimer();
+        countdownInterval = setInterval(updateTimer, 1000);
     }
 
     function showNoticeAgain() {
+        if (countdownInterval) clearInterval(countdownInterval); // 暫停倒數
         document.getElementById("registrationSection").style.display = "none";
         document.getElementById("queueSection").style.display = "none";
         document.getElementById("noticeSection").style.display = "block";
@@ -550,6 +581,7 @@
     function cleanPhoneNumber(phone) {
         if (!phone) return "";
         let str = String(phone).trim();
+        str = str.replace(/[０-奪]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
         str = str.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
         str = str.replace(/[\s\-\(\)\+]/g, "");
         if (str.startsWith("8869")) str = "0" + str.substring(3);
@@ -590,7 +622,7 @@
     }
 
     // ==========================================================
-    // 3. 表單送出 (POST 搶名額鎖定 + 推進隊列)
+    // 3. 表單送出 (POST 搶名額鎖定 + 停止計時)
     // ==========================================================
     async function submitRegistration(e) {
         e.preventDefault();
@@ -638,9 +670,11 @@
             submitBtn.innerHTML = `🚀 確認並送出報名`;
 
             if (result.status === "success") {
+                // 成功送出：停止倒數計時器
+                if (countdownInterval) clearInterval(countdownInterval);
                 showAlert("success", result.message);
                 document.getElementById("signupForm").reset();
-                sessionStorage.removeItem("MY_QUEUE_TICKET"); // 完成後清除號碼牌
+                sessionStorage.removeItem("MY_QUEUE_TICKET");
                 loadClubOptions();
             } else if (result.status === "full") {
                 showAlert("warning", result.message);
