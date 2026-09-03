@@ -81,6 +81,23 @@
             margin-bottom: 20px;
         }
 
+        /* 加深且放大的同意核取方塊樣式 */
+        .agree-checkbox-custom {
+            width: 1.4em !important;
+            height: 1.4em !important;
+            border: 2px solid #4e73df !important; /* 👈 加深邊框顏色並加粗 */
+            cursor: pointer;
+            vertical-align: middle;
+        }
+        .agree-checkbox-custom:hover {
+            border-color: #224abe !important;
+            box-shadow: 0 0 6px rgba(78, 115, 223, 0.4);
+        }
+        .agree-checkbox-custom:checked {
+            background-color: #4e73df !important;
+            border-color: #4e73df !important;
+        }
+
         /* 排隊等候室樣式 */
         .queue-box {
             max-width: 550px;
@@ -310,8 +327,9 @@
 
                     <div class="card p-3 bg-light border text-center my-3 shadow-sm">
                         <div class="form-check d-inline-block text-start mb-3">
-                            <input class="form-check-input" type="checkbox" id="agreeCheckbox" onchange="toggleAgreeButton()">
-                            <label class="form-check-label fw-bold text-dark fs-6" for="agreeCheckbox" style="cursor: pointer;">
+                            <!-- 👇 顏色加深、尺寸放大的 Checkbox -->
+                            <input class="form-check-input agree-checkbox-custom me-2" type="checkbox" id="agreeCheckbox" onchange="toggleAgreeButton()">
+                            <label class="form-check-label fw-bold text-dark fs-6" for="agreeCheckbox" style="cursor: pointer; vertical-align: middle;">
                                 我已詳閱並同意上述社團活動需知與退費辦法規定
                             </label>
                         </div>
@@ -488,7 +506,6 @@
     let queuePollingTimer = null;
     let countdownInterval = null;
 
-    // 【修正 1】：更穩定的 Tab 切換方式 (直接觸發點擊)
     function switchToFormTab() {
         const tabBtn = document.getElementById('form-tab');
         if (tabBtn) {
@@ -497,7 +514,6 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // 勾選核取方塊解鎖按鈕
     function toggleAgreeButton() {
         const checkbox = document.getElementById("agreeCheckbox");
         const agreeBtn = document.getElementById("agreeBtn");
@@ -507,15 +523,13 @@
     }
 
     // ==========================================================
-    // 1. 排隊取號與狀態輪詢邏輯 (已強化錯誤處理與即時切換)
+    // 1. 排隊取號與狀態輪詢邏輯
     // ==========================================================
     async function requestQueueEntry() {
-        // 1. 立即切換 UI，隱藏需知並顯示排隊畫面
         document.getElementById("noticeSection").style.display = "none";
         document.getElementById("queueSection").style.display = "block";
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // 2. 若沒有有效號碼牌，向後端領取
         if (!currentMyTicket) {
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=getTicket&_t=${Date.now()}`);
@@ -532,7 +546,6 @@
                         startQueuePolling();
                     }
                 } else {
-                    // 若後端回傳異常，直接放行進入表單 (降級保護機制)
                     enterRegistrationForm();
                 }
             } catch (err) {
@@ -540,7 +553,6 @@
                 enterRegistrationForm();
             }
         } else {
-            // 已有號碼，直接檢查進度
             checkCurrentQueueStatus();
         }
     }
@@ -597,7 +609,6 @@
         loadClubOptions();
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // 啟動 3 分鐘 (180 秒) 倒數計時
         startCountdown(180);
     }
 
@@ -632,7 +643,6 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // 【修正 3】：修復全形數字正規表達式 [０-９]
     function cleanPhoneNumber(phone) {
         if (!phone) return "";
         let str = String(phone).trim();
