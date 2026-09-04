@@ -409,7 +409,8 @@
                                 <select class="form-select form-select-lg" id="clubSelect" required>
                                     <option value="" selected disabled>⏳ 社團名額載入中...</option>
                                 </select>
-                                <button class="btn btn-outline-secondary" type="button" onclick="loadClubOptions(true)" title="重新整理名額">
+                                <!-- 👇 加上 id="refreshClubBtn"，載入時會顯示「⏳ 執行中...」並鎖定 -->
+                                <button class="btn btn-outline-secondary" type="button" id="refreshClubBtn" onclick="loadClubOptions(true)" title="重新整理名額">
                                     🔄 刷新
                                 </button>
                             </div>
@@ -522,6 +523,7 @@
     
     let queuePollingTimer = null;
     let countdownInterval = null;
+    let isClubsLoadedSuccess = false; // 標記社團資料是否已成功載入
 
     function switchToFormTab() {
         const tabBtn = document.getElementById('form-tab');
@@ -613,7 +615,7 @@
         }
     }
 
-    // 【核心修正】：正式進入填寫表單 (記錄絕對時間，防 F5 刷新作弊)
+    // 正式進入填寫表單
     function enterRegistrationForm() {
         if (queuePollingTimer) clearInterval(queuePollingTimer);
         document.getElementById("queueSection").style.display = "none";
@@ -623,10 +625,20 @@
         const badge = document.getElementById("activeTicketBadge");
         if (badge) badge.innerText = currentMyTicket ? `#${currentMyTicket}` : `#1`;
         
-        loadClubOptions();
+        // 進入表單時先顯示預設時間，但不倒數，等待 loadClubOptions 成功後才開始
+        const timerDisplay = document.getElementById("countdownTimer");
+        if (timerDisplay) {
+            timerDisplay.textContent = "03:00";
+        }
+
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // 取得或建立開始時間戳記 (Timestamp)
+        // 開始載入社團選項（成功後會自動啟動計時器）
+        loadClubOptions();
+    }
+
+    // 啟動 / 恢復絕對倒數計時
+    function resumeCountdownTimer() {
         let startTime = sessionStorage.getItem("QUEUE_START_TIME");
         const now = Date.now();
 
@@ -637,27 +649,34 @@
             startTime = Number(startTime);
         }
 
-        // 計算實際已過秒數與剩餘秒數
         const elapsed = Math.floor((now - startTime) / 1000);
         const remaining = FILLING_DURATION_SECONDS - elapsed;
 
         if (remaining <= 0) {
-            // 已超過 3 分鐘，就算重整也直接判定逾時！
             handleTimeoutExpiry();
         } else {
-            // 從剩餘時間開始倒數
-            startCountdown(remaining);
+            startCountdown();
         }
     }
 
-    // 動態倒數計時函式
-    function startCountdown(remainingSeconds) {
+    // 暫停計時（名額載入中或刷新時暫停）
+    function pauseCountdownTimer() {
+        if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+        }
+    }
+
+    function startCountdown() {
         if (countdownInterval) clearInterval(countdownInterval);
         
         const timerDisplay = document.getElementById("countdownTimer");
-        const startTime = Number(sessionStorage.getItem("QUEUE_START_TIME"));
 
         function updateTimer() {
+            // 若社團名額未載入成功，不執行扣秒
+            if (!isClubsLoadedSuccess) return;
+
+            const startTime = Number(sessionStorage.getItem("QUEUE_START_TIME"));
             const now = Date.now();
             const elapsed = Math.floor((now - startTime) / 1000);
             const currentRemaining = FILLING_DURATION_SECONDS - elapsed;
@@ -680,9 +699,8 @@
 
     // 處理填表逾時
     function handleTimeoutExpiry() {
-        if (countdownInterval) clearInterval(countdownInterval);
-        alert("⏰ 您的 3 分鐘填表時間已過期，請重新排隊領號！");
-        // 清除號碼與開始時間
+        pauseCountdownTimer();
+        alert("⏰ 您的 3 分鐘填表時間已過期，為確保名額順暢，系統即將重新載入！");
         sessionStorage.removeItem("MY_QUEUE_TICKET");
         sessionStorage.removeItem("QUEUE_START_TIME");
         currentMyTicket = null;
@@ -690,7 +708,7 @@
     }
 
     function showNoticeAgain() {
-        if (countdownInterval) clearInterval(countdownInterval);
+        pauseCountdownTimer();
         document.getElementById("registrationSection").style.display = "none";
         document.getElementById("queueSection").style.display = "none";
         document.getElementById("noticeSection").style.display = "block";
@@ -707,11 +725,22 @@
     }
 
     // ==========================================================
-    // 2. 動態載入未額滿社團選項
+    // 2. 動態載入未額滿社團選項 (含刷新按鈕鎖定 + 載入期間時間暫停)
     // ==========================================================
     async function loadClubOptions(showToast = false) {
         const select = document.getElementById("clubSelect");
+        const refreshBtn = document.getElementById("refreshClubBtn");
         if (!select) return;
+
+        // 【修正 1】：點擊刷新時，按鈕立刻進入 disabled 並顯示「⏳ 執行中...」
+        if (refreshBtn) {
+            refreshBtn.disabled = true;
+            refreshBtn.innerHTML = `⏳ 執行中...`;
+        }
+
+        // 【修正 2】：在載入名額資料期間，暫停倒數計時（不扣減使用者時間）
+        isClubsLoadedSuccess = false;
+        pauseCountdownTimer();
 
         try {
             const res = await fetch(`${SCRIPT_URL}?action=getClubs&_t=${Date.now()}`, { cache: "no-store" });
@@ -732,10 +761,25 @@
                         select.appendChild(opt);
                     });
                 }
+
+                // 資料成功載入完畢，標記成功並「啟動 / 恢復倒數計時」
+                isClubsLoadedSuccess = true;
+                resumeCountdownTimer();
+
                 if (showToast) alert("✅ 社團名額已更新！");
+            } else {
+                select.innerHTML = `<option value="" disabled selected>❌ 載入失敗，請點右側「刷新」重試</option>`;
+                // 載入失敗時時間持續暫停
             }
         } catch (err) {
-            select.innerHTML = `<option value="" disabled selected>❌ 載入失敗，請點右側「刷新」重試</option>`;
+            select.innerHTML = `<option value="" disabled selected>❌ 網路異常，請點右側「刷新」重試</option>`;
+            // 載入失敗時時間持續暫停
+        } finally {
+            // 【修正 1 恢復】：刷新完成後，恢復按鈕可點擊狀態
+            if (refreshBtn) {
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = `🔄 刷新`;
+            }
         }
     }
 
@@ -788,11 +832,10 @@
             submitBtn.innerHTML = `🚀 確認並送出報名`;
 
             if (result.status === "success") {
-                if (countdownInterval) clearInterval(countdownInterval);
+                pauseCountdownTimer();
                 showAlert("success", result.message);
                 document.getElementById("signupForm").reset();
                 
-                // 成功報名後清除暫存號碼與計時
                 sessionStorage.removeItem("MY_QUEUE_TICKET");
                 sessionStorage.removeItem("QUEUE_START_TIME");
                 currentMyTicket = null;
