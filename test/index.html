@@ -409,7 +409,6 @@
                                 <select class="form-select form-select-lg" id="clubSelect" required>
                                     <option value="" selected disabled>⏳ 社團名額載入中...</option>
                                 </select>
-                                <!-- 👇 加上 id="refreshClubBtn"，載入時會顯示「⏳ 執行中...」並鎖定 -->
                                 <button class="btn btn-outline-secondary" type="button" id="refreshClubBtn" onclick="loadClubOptions(true)" title="重新整理名額">
                                     🔄 刷新
                                 </button>
@@ -525,6 +524,31 @@
     let countdownInterval = null;
     let isClubsLoadedSuccess = false; // 標記社團資料是否已成功載入
 
+    // ==========================================================
+    // 【核心修正】：頁面載入時自動恢復填表狀態 (防誤按 F5 重整)
+    // ==========================================================
+    document.addEventListener("DOMContentLoaded", function () {
+        const savedStartTime = sessionStorage.getItem("QUEUE_START_TIME");
+        
+        // 若使用者原本就已取得號碼牌且已在填表中
+        if (currentMyTicket && savedStartTime) {
+            const now = Date.now();
+            const elapsed = Math.floor((now - Number(savedStartTime)) / 1000);
+            const remaining = FILLING_DURATION_SECONDS - elapsed;
+
+            if (remaining > 0) {
+                // 仍在 3 分鐘有效時間內：自動切換至線上報名並直接展開填報表單！
+                switchToFormTab();
+                enterRegistrationForm();
+            } else {
+                // 已逾期：清除紀錄
+                sessionStorage.removeItem("MY_QUEUE_TICKET");
+                sessionStorage.removeItem("QUEUE_START_TIME");
+                currentMyTicket = null;
+            }
+        }
+    });
+
     function switchToFormTab() {
         const tabBtn = document.getElementById('form-tab');
         if (tabBtn) {
@@ -615,7 +639,7 @@
         }
     }
 
-    // 正式進入填寫表單
+    // 正式進入填寫表單 (支援重整恢復)
     function enterRegistrationForm() {
         if (queuePollingTimer) clearInterval(queuePollingTimer);
         document.getElementById("queueSection").style.display = "none";
@@ -625,23 +649,9 @@
         const badge = document.getElementById("activeTicketBadge");
         if (badge) badge.innerText = currentMyTicket ? `#${currentMyTicket}` : `#1`;
         
-        // 進入表單時先顯示預設時間，但不倒數，等待 loadClubOptions 成功後才開始
-        const timerDisplay = document.getElementById("countdownTimer");
-        if (timerDisplay) {
-            timerDisplay.textContent = "03:00";
-        }
-
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-
-        // 開始載入社團選項（成功後會自動啟動計時器）
-        loadClubOptions();
-    }
-
-    // 啟動 / 恢復絕對倒數計時
-    function resumeCountdownTimer() {
+        // 若尚未記錄開始時間，則記錄當前時間戳記；若已存在則沿用原開始時間
         let startTime = sessionStorage.getItem("QUEUE_START_TIME");
         const now = Date.now();
-
         if (!startTime) {
             startTime = now;
             sessionStorage.setItem("QUEUE_START_TIME", startTime);
@@ -649,6 +659,26 @@
             startTime = Number(startTime);
         }
 
+        const elapsed = Math.floor((now - startTime) / 1000);
+        const remaining = FILLING_DURATION_SECONDS - elapsed;
+
+        const timerDisplay = document.getElementById("countdownTimer");
+        if (timerDisplay) {
+            let m = Math.max(0, Math.floor(remaining / 60));
+            let s = Math.max(0, remaining % 60);
+            timerDisplay.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // 開始載入社團選項（成功後會自動啟動/恢復計時器）
+        loadClubOptions();
+    }
+
+    // 啟動 / 恢復絕對倒數計時
+    function resumeCountdownTimer() {
+        let startTime = Number(sessionStorage.getItem("QUEUE_START_TIME") || Date.now());
+        const now = Date.now();
         const elapsed = Math.floor((now - startTime) / 1000);
         const remaining = FILLING_DURATION_SECONDS - elapsed;
 
@@ -732,13 +762,11 @@
         const refreshBtn = document.getElementById("refreshClubBtn");
         if (!select) return;
 
-        // 【修正 1】：點擊刷新時，按鈕立刻進入 disabled 並顯示「⏳ 執行中...」
         if (refreshBtn) {
             refreshBtn.disabled = true;
             refreshBtn.innerHTML = `⏳ 執行中...`;
         }
 
-        // 【修正 2】：在載入名額資料期間，暫停倒數計時（不扣減使用者時間）
         isClubsLoadedSuccess = false;
         pauseCountdownTimer();
 
@@ -762,20 +790,16 @@
                     });
                 }
 
-                // 資料成功載入完畢，標記成功並「啟動 / 恢復倒數計時」
                 isClubsLoadedSuccess = true;
                 resumeCountdownTimer();
 
                 if (showToast) alert("✅ 社團名額已更新！");
             } else {
                 select.innerHTML = `<option value="" disabled selected>❌ 載入失敗，請點右側「刷新」重試</option>`;
-                // 載入失敗時時間持續暫停
             }
         } catch (err) {
             select.innerHTML = `<option value="" disabled selected>❌ 網路異常，請點右側「刷新」重試</option>`;
-            // 載入失敗時時間持續暫停
         } finally {
-            // 【修正 1 恢復】：刷新完成後，恢復按鈕可點擊狀態
             if (refreshBtn) {
                 refreshBtn.disabled = false;
                 refreshBtn.innerHTML = `🔄 刷新`;
